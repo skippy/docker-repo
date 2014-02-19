@@ -1,0 +1,90 @@
+FROM        ubuntu:13.10
+MAINTAINER  adam.greene@gmail.com
+RUN         apt-get update
+RUN         apt-get -y install redis-server
+EXPOSE      6379
+ENTRYPOINT  ["/usr/bin/redis-server"]
+
+
+
+FROM        ubuntu:13.10
+MAINTAINER  adam.greene@gmail.com
+RUN         apt-get update
+RUN         apt-get -y install redis-server openssh-server supervisor
+RUN         mkdir -p /var/run/sshd
+RUN         mkdir -p /var/log/supervisor
+RUN         echo 'vm.overcommit_memory = 1' >> /etc/sysctl.d/60-redis.conf
+VOLUME      /data/redis
+ENTRYPOINT  /usr/bin/redis-server --dir /data/redis
+
+ADD         supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+EXPOSE      22 6379
+CMD         ["/usr/bin/supervisord"]
+
+
+
+vm.overcommit_memory = 1 to /etc/sysctl.conf
+
+
+
+RUN echo %sudo  ALL=NOPASSWD: ALL >> /etc/sudoers
+
+
+
+
+sed -i -e "s/%{ring_creation_size, 64/{ring_creation_size, 16/" /usr/local/Cellar/riak/1.4.7/libexec/etc/app.config
+sed -i -e "s/storage_backend, riak_kv_bitcask_backend/storage_backend, riak_kv_eleveldb_backend/" /usr/local/Cellar/riak/1.4.7/libexec/etc/app.config
+
+
+
+sed -i -e "s/daemonize yes/daemonize no/" /etc/redis/redis.conf
+sed -i -e "s/#?\s*syslog-enabled no/syslog-enabled yes/" /etc/redis/redis.conf
+sed -i -e "s/# syslog-ident redis/syslog-ident redis/" /etc/redis/redis.conf
+sed -i -e "s/# syslog-facility local0/syslog-facility local0/" /etc/redis/redis.conf
+sed -i -e "s/dir /var/lib/redis/dir /mnt/data/redis" /etc/redis/redis.conf
+
+
+dir /var/lib/redis
+
+
+# syslog-enabled no
+
+
+
+
+FROM        ubuntu:13.10
+MAINTAINER  Adam Greene adam.greene@gmail.com
+RUN         apt-get update
+RUN         apt-get -y upgrade
+
+# Basic requirements
+RUN         apt-get -y install redis-server openssh-server supervisor
+
+# Folders needed to operate correctly
+RUN         mkdir -p /var/run/sshd
+RUN         mkdir -p /var/log/supervisor
+
+# ssh configs
+RUN         locale-gen en_US en_US.UTF-8
+RUN         /bin/sh -c 'echo root:testpass | chpasswd'
+
+# redis configs
+# RUN         sysctl vm.overcommit_memory=1
+RUN         echo 'vm.overcommit_memory=1' >> /etc/sysctl.d/60-redis.conf
+RUN         sed -i -e "s/daemonize .\+/daemonize no/" /etc/redis/redis.conf
+RUN         sed -i -e "s/dir .\+/dir \/data\/redis/" /etc/redis/redis.conf
+RUN         sed -i -e "s/logfile .\+/logfile stdout/" /etc/redis/redis.conf
+RUN         sed -i -e "s/appendonly .\+/appendonly yes/" /etc/redis/redis.conf
+
+VOLUME      /data/redis
+
+# Supervisor config
+ADD         supervisord.conf /etc/supervisor/conf.d/redis.conf
+
+# Expose SSH and Redis default ports
+EXPOSE      6379
+
+CMD         /usr/bin/supervisord
+
+
+
