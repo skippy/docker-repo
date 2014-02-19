@@ -31,14 +31,19 @@ RUN         locale-gen en_US
 ## Basic requirements
 RUN         apt-get -y install supervisor cron curl syslog-ng-core
 
+## lets cleanup so the image size is small(er)
+RUN         apt-get clean
+RUN         rm -rf /tmp/* /var/tmp/* /var/log/*.log /var/log/*/*.log
+
 ## Setting up SupervisorD
 ADD         supervisord.conf /etc/supervisor/conf.d/default.conf
 
 ## Setting up syslog
 RUN         mkdir -p /var/lib/syslog-ng
 
-## lets cleanup so the image size is small(er)
-RUN         apt-get clean
-RUN         rm -rf /tmp/* /var/tmp/* /var/log/*.log /var/log/*/*.log
+## Hook in setup script
+ADD         configure_container.sh /configure_container.sh
+RUN         chmod +x /configure_container.sh
+
 
 CMD         /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
