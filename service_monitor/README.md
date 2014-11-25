@@ -82,10 +82,32 @@ Usage: Fleet
 -------------------------
 Here is an example systemd configuration file for starting a cluster of elasticsearch instances and have them self-cluster.
 
+To run, log into a CoreOS instance, use the sample below and save it as `elasticsearch_logging@.service`, and then:
+
+```
+fleetctl stop elasticsearch_logging@{1..2}.service
+fleetctl destroy elasticsearch_logging@.service elasticsearch_logging@{1..2}.service
+fleetctl submit path/to/elasticsearch_logging@.service
+fleetctl load elasticsearch_logging@{1..2}.service
+fleetctl start elasticsearch_logging@{1..2}.service
+```
+
+Some useful commands to see what is going on are:
+```
+fleetctl list-machines
+fleetctl list-unit-files
+fleetctl list-units
+fleetctl journal -f elasticsearch_logging@1.service
+```
+
+and to see if it started up, grab the IP of one of your CoreOS machines and go to `http://IP_ADDRESS:9200/_plugin/marvel`
+
+
 **NOTE** there are two ways to do this; one is you can put everything in one file, as shown below.  The 'better' approach is to break this up into 3 files:
 * lease acquistion
 * main service
 * monitor
+
 
 ```
 # Design:
@@ -97,6 +119,8 @@ Here is an example systemd configuration file for starting a cluster of elastics
 #     will all think they are the first.
 #   - Allow ElasticSearch to take unto 240 seconds to boot up 
 #     before we allow the next instance in the cluster to come online
+#   - do not start more than one elasticSearch node per host;
+#     This is to prevent conflicts with port mapping
 #
 
 [Unit]
@@ -196,6 +220,10 @@ ExecStartPost=/bin/bash -c '\
 ExecStop=/usr/bin/docker stop -t 10 %p-monitor_lock-%i
 ExecStop=/usr/bin/docker stop -t 10 %p-monitor-%i
 ExecStop=/usr/bin/docker stop -t 30 %p-%i
+
+[X-Fleet]
+# prevent port conflicts
+Conflicts=%p@.*service
 ```
 
 
