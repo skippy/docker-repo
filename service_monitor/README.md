@@ -143,7 +143,7 @@ ExecStartPre=/usr/bin/docker pull busybox
 ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%i" 
 ## block startup process until we can acquire a lease.
 ## Fail and have SystemD retry if the lease cannot be acquired.
-ExecStartPre=/usr/bin/docker run --rm --name %p-monitor_lock-%i -e HOST_IP=${COREOS_PRIVATE_IPV4} skippy/service_monitor acquire-lease --label=%p --service-id=%p-%i
+ExecStartPre=/usr/bin/docker run --rm --name %p-monitor_lock-%i skippy/service_monitor acquire-lease --label=%p --service-id=%p-%i --host-ip=${COREOS_PRIVATE_IPV4}
 
 ## lets:
 ##  - get all running cluster hosts;
@@ -151,9 +151,9 @@ ExecStartPre=/usr/bin/docker run --rm --name %p-monitor_lock-%i -e HOST_IP=${COR
 ExecStart=/bin/bash -c '\
 	UNICAST_HOSTS=$(/usr/bin/docker run \
 			--rm \
-			-e HOST_IP=${COREOS_PRIVATE_IPV4} \
 			skippy/service_monitor hosts \
 				--label=%p \
+				--host-ip=${COREOS_PRIVATE_IPV4} \
 		| sed "s/$/:9300/" \
 		| paste -s -d","); \
 	if [ "$UNICAST_HOSTS" = "" ]; then \
@@ -184,10 +184,10 @@ ExecStartPost=/bin/bash -c '\
 	/usr/bin/docker run \
 		--rm \
 		--name %p-monitor-%i \
-		-e HOST_IP=${COREOS_PRIVATE_IPV4} \
 		skippy/service_monitor watch \
 			--label="%p" \
 			--service-id="%p-%i" \
+			--host-ip=${COREOS_PRIVATE_IPV4} \
 			--monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
 			--service-info=\'{"http_port": 9200, "transport_port": 9300, "name": "%p-%i"}\' '
 

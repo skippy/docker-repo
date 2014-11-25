@@ -143,8 +143,9 @@ host_parser.add_argument('--label', metavar='<LABEL>', required=True, help='Gene
 host_parser.add_argument('--backend', metavar='<BACKEND>', choices=['etcd', 'DynamoDB'])
 
 # #add common and OPTIONAL arguments
-# for title, subparser in subparsers.choices.iteritems():
-#     subparser.add_argument('--backend', metavar='<BACKEND>', choices=['etcd', 'DynamoDB'])
+for title, subparser in subparsers.choices.iteritems():
+    subparser.add_argument('--backend', metavar='<BACKEND>', choices=['etcd', 'DynamoDB'])
+    subparser.add_argument('--host-ip', metavar='<HOST_IP>', help='set the host_ip rather than trying to figure it out from `ip route` or `ip address`')
 
 
 args = parser.parse_args()
@@ -152,7 +153,7 @@ args = parser.parse_args()
 ## Setup
 ############################################################################
 process       = subprocess.Popen("ip route show 0.0.0.0/0 | grep -Eo 'via \S+' | awk '{ print $2 }'", stdout=subprocess.PIPE, shell=True)
-host_ip       = os.getenv('HOST_IP')
+host_ip       = args.host_ip
 if not host_ip:
     # lets try docker way
     process = subprocess.Popen("ip address show docker0 2>/dev/null | grep 'inet ' | awk '{gsub(/\/[0-9]{2}/, \"\"); print $2}'", stdout=subprocess.PIPE, shell=True)
