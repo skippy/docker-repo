@@ -97,7 +97,7 @@ def hosts(args):
     response = requests.get(etcd_service_hosts + '?recursive=true&consistent=true')
     # response = requests.get('http://172.17.8.103:4001/v2/keys/services/elasticsearch_logging/hosts?recursive=true')
     response.encoding = 'UTF-8'
-    json = response.json
+    json = response.json()
     output=[]
     if 'node' in json and 'nodes' in json['node']:
         for i, node in enumerate(json['node']['nodes']):
