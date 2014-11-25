@@ -1,0 +1,120 @@
+# Design:
+#  The goal is to bring up ElasticSearch, and allow it to
+#  self-join the ElasticSearch Logging cluster.
+#  This requires a few things:
+#   - Instances can't all come online at once otherwise they 
+#     won't be able to find any members of the cluster, as they
+#     will all think they are the first.
+#   - etcd doesn't currently have a distributed lock system,
+#     so we need to handle it ourselves by a double-check locking
+#   - we can wait 120+ seconds, but if we want to have a tighter,
+#     and more accurate check, we need to expire the lock once 
+#     it comes up.
+#
+# I tried elasticsearch_logging-discovery, and this works up
+# until we want to accurately release the lock.  Then we put
+# logic all over the place and it gets ugly quickly.  This
+# isn't THAT cleaner, but it is a bit
+#
+# TODO:
+#  - move the lock and discovery logic into its own docker container
+#    with a python script to do this sort of checking.
+#  
+# Opens Ports 9200 (HTTP) and 9300 (transport)
+[Unit]
+Description=%p-%i
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+
+# Dependency ordering
+After=etcd.service
+After=docker.service
+ 
+
+[Service]
+# Let processes take awhile to start up (for first run Docker containers)
+TimeoutStartSec=0
+# keep kill mode, but lets give docker plenty of chances to stop cleanly
+TimeoutStopSec=90
+
+# have SystemD restart the service if it goes down
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker kill %p-monitor-%i
+ExecStartPre=-/usr/bin/docker kill %p-monitor_lock-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-monitor-%i
+ExecStartPre=-/usr/bin/docker rm %p-monitor_lock-%i
+ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
+ExecStartPre=/usr/bin/docker pull skippy/service_monitor
+ExecStartPre=/usr/bin/docker pull busybox
+ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%i" 
+ExecStartPre=/usr/bin/docker run --rm --name %p-monitor_lock-%i skippy/service_monitor acquire-lease --label=%p --service-id=%p-%i --host-ip=${COREOS_PRIVATE_IPV4}
+
+# lets:
+#  - startup individual nodes in a serial manner;
+#  - get all existing and running cluster hosts;
+#  - startup elastic search, linking to cluster hosts, if any!
+#  - after this node is started, remove the lock 
+#    so the next node can startup.
+#  - keep a watch on the health and update etcd as
+#    long as the instanc is healthy.
+ExecStart=/bin/bash -c '\
+	UNICAST_HOSTS=$(/usr/bin/docker run --rm skippy/service_monitor hosts \
+			--label=%p \
+			--host-ip=${COREOS_PRIVATE_IPV4} \
+		| sed "s/$/:9300/" \
+		| paste -s -d","); \
+	if [ "$UNICAST_HOSTS" = "" ]; then \
+		systemd-cat -t "[%p]" echo "Initial cluster node"; \
+	else \
+		systemd-cat -t "[%p]" echo "Connecting to cluster hosts: $UNICAST_HOSTS"; \
+    fi; \
+	/usr/bin/docker run \
+		--rm \
+		--name %p-%i \
+		--volumes-from esldata \
+		-p 9200:9200 -p 9300:9300 \
+		skippy/elasticsearch \
+		/elasticsearch/bin/elasticsearch \
+			-Des.default.cluster.name=Logging \
+			-Des.default.node.name=%p-%i \
+			-Des.default.bootstrap.mlockall=true \
+			-Des.default.index.number_of_replicas=3 \
+			-Des.default.network.publish_host=${COREOS_PRIVATE_IPV4} \
+			-Des.default.discovery.zen.ping.multicast.enabled=false \
+			-Des.default.discovery.zen.ping.unicast.hosts=$UNICAST_HOSTS'
+
+ExecStartPost=/bin/bash -c '\
+	/usr/bin/docker run \
+		--rm \
+		--name %p-monitor-%i \
+		skippy/service_monitor watch \
+			--label="%p" \
+			--service-id="%p-%i" \
+			--host-ip=${COREOS_PRIVATE_IPV4} \
+			--monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
+			--service-info=\'{"http_port": 9200, "transport_port": 9300, "name": "%p-%i"}\' '
+
+ExecStop=/usr/bin/docker stop -t 10 %p-monitor_lock-%i
+ExecStop=/usr/bin/docker stop -t 10 %p-monitor-%i
+ExecStop=/usr/bin/docker stop -t 30 %p-%i
+
+
+[X-Fleet]
+Conflicts=%p@.*service
+
+# fleetctl stop elasticsearch_logging@{1..2}.service
+# fleetctl destroy elasticsearch_logging@.service
+# fleetctl submit share/elasticsearch/fleet/elasticsearch_logging@.service
+# fleetctl load elasticsearch_logging@{1..2}.service
+# fleetctl start elasticsearch_logging@{1..2}.service

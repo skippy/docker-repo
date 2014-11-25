@@ -1,0 +1,46 @@
+# NOTE: This file is not in use as elasticsearch_logging@.service
+#  takes care of discovery as well
+[Unit]
+Description=Elasticsearch Discovery Service %i
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=elasticsearch_logging@%i.service
+
+# Dependency ordering
+After=etcd.service
+After=elasticsearch_logging@%i.service
+BindsTo=elasticsearch_logging@%i.service
+
+ 
+[Service]
+# have SystemD restart the service if it goes down
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+
+ExecStart=/bin/bash -c '\
+  while true; do \
+  	curl -sf localhost:9200 > /dev/null; \
+    if [ $? -eq 0 ]; then \
+      systemd-cat -t "[Elasticsearch-Discovery]" echo "ES is up"; \
+      /usr/bin/etcdctl set /services/elasticsearch_logging/hosts/${COREOS_PRIVATE_IPV4} \'{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%i"}\' --ttl 30 > /dev/null; \
+    else \
+      /usr/bin/etcdctl rm /services/elasticsearch_logging/hosts/${COREOS_PRIVATE_IPV4} 2> /dev/null; \
+    fi; \
+    sleep 20; \
+  done'
+
+ExecStop=/usr/bin/etcdctl rm /services/elasticsearch_logging/hosts/${COREOS_PRIVATE_IPV4} 2> /dev/null; \
+
+
+[X-Fleet]
+# Schedule on the same machine as the associated hello service
+MachineOf=elasticsearch_logging@%i.service
+
