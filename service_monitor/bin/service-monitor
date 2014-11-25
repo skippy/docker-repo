@@ -125,7 +125,6 @@ watch_parser.add_argument('--monitor-url', metavar='<MONITOR-URL>', required=Tru
                          'externally available URL, such as "http://172.17.8.101:9200", or one from a ' + 
                          'linked container such as "http://service:9200".')
 watch_parser.add_argument('--service-info', metavar='<SERVICE-INFO>', help='If nothing is added, defaults to "{"name": "<SERVICE-ID>"}".')
-watch_parser.add_argument('--backend', metavar='<BACKEND>', choices=['etcd', 'DynamoDB'])
 
 # An aquire-lease command
 lease_parser = subparsers.add_parser('acquire-lease', help='Acquire a lease to start monitoring')
@@ -134,13 +133,11 @@ lease_parser.add_argument('--label', metavar='<LABEL>', required=True, help='Gen
 lease_parser.add_argument('--service-id', metavar='<SERVICE-ID>', required=True, help='The specific id of the service to monitor.')
 lease_parser.add_argument('--lease-timeout', metavar='<LEASE-TIMEOUT>', type=int, help='How long until the lease expires', default=240)
 lease_parser.add_argument('--acquire-timeout', metavar='<ACQUIRE-TIMEOUT>', type=int, help='How long until the lease expires', default=360)
-lease_parser.add_argument('--backend', metavar='<BACKEND>', choices=['etcd', 'DynamoDB'])
 
 # A hosts command
 host_parser = subparsers.add_parser('hosts', help='list hosts')
 host_parser.set_defaults(func=hosts)
 host_parser.add_argument('--label', metavar='<LABEL>', required=True, help='General label of the Service to monitor.')
-host_parser.add_argument('--backend', metavar='<BACKEND>', choices=['etcd', 'DynamoDB'])
 
 # #add common and OPTIONAL arguments
 for title, subparser in subparsers.choices.iteritems():
