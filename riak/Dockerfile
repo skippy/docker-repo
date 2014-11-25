@@ -1,8 +1,8 @@
 FROM        skippy/base
 MAINTAINER  Adam Greene <adam.greene@gmail.com>
 
-# Basic requirements; need to grab the latest redis version
-RUN         apt-get -y install curl lsb-release
+# Basic requirements;
+RUN         apt-get -y install lsb-release
 
 # setup Riak repo
 RUN         curl -s http://apt.basho.com/gpg/basho.apt.key | apt-key add --
