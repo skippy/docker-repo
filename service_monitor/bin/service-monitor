@@ -16,7 +16,7 @@ import socket
 
 import urllib
 import requests
-import boto
+import boto3
 
 
 def print_msg(message):
