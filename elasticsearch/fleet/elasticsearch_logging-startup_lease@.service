@@ -1,0 +1,33 @@
+[Unit]
+Description=Elasticsearch Sequential Startup
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=elasticsearch_logging@%i.service
+
+# Dependency ordering
+After=etcd.service
+Before=elasticsearch_logging@%i.service
+
+ 
+[Service]
+#prevent SystemD from starting other units until this one exits
+Type=oneshot
+Restart=no
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=/usr/bin/docker pull skippy/service_monitor
+ExecStart=/usr/bin/docker run --rm --name %p-%i skippy/service_monitor acquire-lease --label=elasticsearch_logging --service-id=elasticsearch_logging-%i --host-ip=${COREOS_PRIVATE_IPV4}
+
+
+[X-Fleet]
+# Schedule on the same machine as the associated hello service
+MachineOf=elasticsearch_logging@%i.service
+

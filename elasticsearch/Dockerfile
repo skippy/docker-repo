@@ -1,5 +1,5 @@
 #
-FROM dockerfile/elasticsearch
+FROM dockerfile/elasticsearch:latest
 MAINTAINER Adam Greene <adam.greene@gmail.com>
 
 # need to run as root as long as dockerfile/elasticsearch created all the dirs under root
@@ -11,7 +11,6 @@ RUN sed -i '/\plugins/d' /elasticsearch/config/elasticsearch.yml
 
 # Install plugins
 RUN /elasticsearch/bin/plugin --install elasticsearch/marvel/latest
-RUN /elasticsearch/bin/plugin --install lmenezes/elasticsearch-kopf
 RUN /elasticsearch/bin/plugin -url http://download.elasticsearch.org/kibana/kibana/kibana-latest.zip --install elasticsearch/kibana3
 
 # Start Elasticsearch

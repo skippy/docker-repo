@@ -1,5 +1,3 @@
-# NOTE: This file is not in use as elasticsearch_logging@.service
-#  takes care of discovery as well
 [Unit]
 Description=Elasticsearch Discovery Service %i
 
@@ -15,6 +13,11 @@ BindsTo=elasticsearch_logging@%i.service
 
  
 [Service]
+# Let processes take awhile to start up (for first run Docker containers)
+TimeoutStartSec=0
+# keep kill mode, but lets give docker plenty of chances to stop cleanly
+TimeoutStopSec=90
+
 # have SystemD restart the service if it goes down
 Restart=always
 RestartSec=10s
@@ -24,20 +27,21 @@ EnvironmentFile=/etc/environment
 
 # Pre-start and Start
 ## Directives with "=-" are allowed to fail without consequence
-
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=/usr/bin/docker pull skippy/service_monitor
 ExecStart=/bin/bash -c '\
-  while true; do \
-  	curl -sf localhost:9200 > /dev/null; \
-    if [ $? -eq 0 ]; then \
-      systemd-cat -t "[Elasticsearch-Discovery]" echo "ES is up"; \
-      /usr/bin/etcdctl set /services/elasticsearch_logging/hosts/${COREOS_PRIVATE_IPV4} \'{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%i"}\' --ttl 30 > /dev/null; \
-    else \
-      /usr/bin/etcdctl rm /services/elasticsearch_logging/hosts/${COREOS_PRIVATE_IPV4} 2> /dev/null; \
-    fi; \
-    sleep 20; \
-  done'
+  /usr/bin/docker run \
+    --rm \
+    --name %p-%i \
+    skippy/service_monitor watch \
+      --label="elasticsearch_logging" \
+      --service-id="elasticsearch_logging-%i" \
+      --host-ip=${COREOS_PRIVATE_IPV4} \
+      --monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
+      --service-info=\'{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%i"}\' '
 
-ExecStop=/usr/bin/etcdctl rm /services/elasticsearch_logging/hosts/${COREOS_PRIVATE_IPV4} 2> /dev/null; \
+ExecStop=/usr/bin/docker stop -t 10 %p-%i
 
 
 [X-Fleet]

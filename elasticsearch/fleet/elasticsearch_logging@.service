@@ -27,11 +27,14 @@ Description=%p-%i
 # Requirements
 Requires=etcd.service
 Requires=docker.service
+Requires=elasticsearch_logging-discovery@%i.service
+Requires=elasticsearch_logging-startup_lease@%i.service
 
 # Dependency ordering
 After=etcd.service
 After=docker.service
- 
+After=elasticsearch_logging-startup_lease@%i.service
+Before=elasticsearch_logging-discovery@%i.service
 
 [Service]
 # Let processes take awhile to start up (for first run Docker containers)
@@ -49,16 +52,11 @@ EnvironmentFile=/etc/environment
 # Pre-start and Start
 ## Directives with "=-" are allowed to fail without consequence
 ExecStartPre=-/usr/bin/docker kill %p-%i
-ExecStartPre=-/usr/bin/docker kill %p-monitor-%i
-ExecStartPre=-/usr/bin/docker kill %p-monitor_lock-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
-ExecStartPre=-/usr/bin/docker rm %p-monitor-%i
-ExecStartPre=-/usr/bin/docker rm %p-monitor_lock-%i
 ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
 ExecStartPre=/usr/bin/docker pull skippy/service_monitor
 ExecStartPre=/usr/bin/docker pull busybox
 ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%i" 
-ExecStartPre=/usr/bin/docker run --rm --name %p-monitor_lock-%i skippy/service_monitor acquire-lease --label=%p --service-id=%p-%i --host-ip=${COREOS_PRIVATE_IPV4}
 
 # lets:
 #  - startup individual nodes in a serial manner;
@@ -94,19 +92,7 @@ ExecStart=/bin/bash -c '\
 			-Des.default.discovery.zen.ping.multicast.enabled=false \
 			-Des.default.discovery.zen.ping.unicast.hosts=$UNICAST_HOSTS'
 
-ExecStartPost=/bin/bash -c '\
-	/usr/bin/docker run \
-		--rm \
-		--name %p-monitor-%i \
-		skippy/service_monitor watch \
-			--label="%p" \
-			--service-id="%p-%i" \
-			--host-ip=${COREOS_PRIVATE_IPV4} \
-			--monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
-			--service-info=\'{"http_port": 9200, "transport_port": 9300, "name": "%p-%i"}\' '
-
 ExecStop=/usr/bin/docker stop -t 10 %p-monitor_lock-%i
-ExecStop=/usr/bin/docker stop -t 10 %p-monitor-%i
 ExecStop=/usr/bin/docker stop -t 30 %p-%i
 
 

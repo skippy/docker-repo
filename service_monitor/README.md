@@ -1,4 +1,4 @@
-ServiceMonitor
+ServiceMonitor Docker Container
 =========
 
 
@@ -29,7 +29,6 @@ Dependencies
 -------
 
 * CoreOS
-* Docker
 * ETCD & Fleet
 
 

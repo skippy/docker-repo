@@ -87,8 +87,8 @@ def watch(args):
             register_service()
             release_lease()
         else:
-            print_msg("Instance {0} is not up and has been unregistered".format(args.service_id))
             unregister_service()
+            print_msg("Instance {0} is not running and has been unregistered".format(args.service_id))
 
         time.sleep(20)
 
