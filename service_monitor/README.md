@@ -15,7 +15,7 @@ Summary
 
 in **DEVELOPMENT** :)
 
-This is a docker container for helping with service discovery, monitoring, and ordered service startup.  It is designed as a separate sidekick process so you can use this for things like [ElasticSearch](https://github.com/skippy/docker-repo/elasticsearch)-compatible interface startup, monitoring, and cluster management, without having to include this logic in your ElasticSearch container.
+This is a docker container for helping with service discovery, monitoring, and ordered service startup.  It is designed as a separate sidekick process so you can use this for things like [ElasticSearch](https://github.com/skippy/docker-repo/tree/master/elasticsearch)-compatible interface startup, monitoring, and cluster management, without having to include this logic in your ElasticSearch container.
 
 * **Service Monitoring:**  This will monitor a service and persist its up or down state.  If the `monitor-url` returns anything except a `2xx` http response code, it will be flagged as unavailable.  
 * **Service Discovery:** This will return a comma-delimited list of hosts that are currently up and running.
@@ -36,50 +36,32 @@ Usage: stand-alone
 -------------------------
 
 ### Monitor
-* Help: 
-
-```bash
-docker run skippy/service_monitor watch --help
-```
+* Help: `docker run skippy/service_monitor watch --help`
 
 * monitor a service:
 
 ```bash
 docker run skippy/service_monitor watch \
 	--label="MyService" \
-	--service-id="Service-0x3241dc3" \
+	--service-id="MyService-0x3241dc3" \
 	--monitor-url="http://127.0.0.1:9200"
 ```
 
 ### Discovery
-* Help: 
+* Help: `docker run skippy/service_monitor hosts --help`
 
-```bash
-docker run skippy/service_monitor hosts --help
-```
-
-* Return a comma-delimited list of hosts:
-
-```bash
-docker run skippy/service_monitor hosts --label="MyService"
-```
+* Return a comma-delimited list of hosts: `docker run skippy/service_monitor hosts --label="MyService"`
 
 ### Startup Lease
-* Help: 
+* Help: `docker run skippy/service_monitor acquire-lease --help`
 
-```bash
-docker run skippy/service_monitor acquire-lease --help
-```
+* Acquire a startup lease (return 0 on success, or blocks for timeout and then return 1 if lease was not able to be acquired):
+`docker run skippy/service_monitor acquire-lease --label="MyService" --service-id="MyService-0x3241dc3"`
 
-* Acquire a startup lease (return 0 on success, or blocks for timeout and then return 1 if lease was not able to be acquired)
-
-```bash
-docker run skippy/service_monitor acquire-lease --label="MyService" --service-id="Service-0x3241dc3"
-```
 
 Usage: Fleet
 -------------------------
-Check out an [example](https://github.com/skippy/docker-repo/tree/master/elasticsearch) of how the ServiceMonitor container is used within a [set of Fleet configuration files](https://github.com/skippy/docker-repo/blob/master/elasticsearch/fleet/README.md)
+Check out an [example](https://github.com/skippy/docker-repo/tree/master/elasticsearch) of how the ServiceMonitor container is used within a [set of Fleet configuration files](https://github.com/skippy/docker-repo/blob/master/elasticsearch/fleet/)
 
 
 <a name="details"></a>
