@@ -54,7 +54,7 @@ EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
-ExecStartPre=/usr/bin/docker pull skippy/service_monitor
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
 ExecStartPre=/usr/bin/docker pull busybox
 ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%i" 
 
@@ -67,7 +67,7 @@ ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /b
 #  - keep a watch on the health and update etcd as
 #    long as the instanc is healthy.
 ExecStart=/bin/bash -c '\
-	UNICAST_HOSTS=$(/usr/bin/docker run --rm skippy/service_monitor hosts \
+	UNICAST_HOSTS=$(/usr/bin/docker run --rm skippy/service_toolkit hosts \
 			--label=%p \
 			--host-ip=${COREOS_PRIVATE_IPV4} \
 		| sed "s/$/:9300/" \
@@ -87,6 +87,8 @@ ExecStart=/bin/bash -c '\
 			-Des.default.cluster.name=Logging \
 			-Des.default.node.name=%p-%i \
 			-Des.default.bootstrap.mlockall=true \
+			-Des.default.transport.tcp.compress=true \
+			-Des.default.http.cors.enabled=true \
 			-Des.default.index.number_of_replicas=3 \
 			-Des.default.network.publish_host=${COREOS_PRIVATE_IPV4} \
 			-Des.default.discovery.zen.ping.multicast.enabled=false \
