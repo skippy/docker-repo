@@ -29,12 +29,12 @@ EnvironmentFile=/etc/environment
 ## Directives with "=-" are allowed to fail without consequence
 ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
-ExecStartPre=/usr/bin/docker pull skippy/service_monitor
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
 ExecStart=/bin/bash -c '\
   /usr/bin/docker run \
     --rm \
     --name %p-%i \
-    skippy/service_monitor watch \
+    skippy/service_toolkit watch \
       --label="elasticsearch_logging" \
       --service-id="elasticsearch_logging-%i" \
       --host-ip=${COREOS_PRIVATE_IPV4} \

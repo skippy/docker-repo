@@ -27,5 +27,5 @@ For anything dealing with clustering, they currently are:
 
 * CoreOS
 * ETCD & Fleet
-* [Skippy/ServiceMonitor](https://registry.hub.docker.com/u/skippy/service_monitor/)
+* [Skippy/ServiceToolkit](https://registry.hub.docker.com/u/skippy/service_toolkit/)
 
