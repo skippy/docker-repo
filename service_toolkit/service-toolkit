@@ -73,7 +73,7 @@ class Toolkit(object):
                 private_key = (item for item in json['node']['nodes'] if item["key"] == "/certs/{0}/x509_private_key".format(self.config.label)).next()['value']
                 cert        = (item for item in json['node']['nodes'] if item["key"] == "/certs/{0}/x509_certificate".format(self.config.label)).next()['value']
                 return {'key': private_key, 'cert': cert, 'type': 'x509'}
-        return {}
+        return None
 
 
     def create_x509_certs(self):
@@ -93,7 +93,7 @@ class Toolkit(object):
 
                 return {'key': private_key, 'cert': cert, 'type': 'x509'}
             else:
-                return {}
+                return None
         finally:
             self.release_lease('x509')
 
@@ -151,7 +151,7 @@ class Config(object):
 
 
     def etcd_service_key_url(self):
-        return '{0}/{1}'.format(etcd_service_hosts_url(), self.host_ip)
+        return '{0}/{1}'.format(self.etcd_service_hosts_url(), self.host_ip)
 
 
     def etcd_cert_keys_url(self):
