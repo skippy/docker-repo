@@ -99,7 +99,7 @@ ExecStop=/usr/bin/docker stop -t 30 %p-%i
 
 
 [X-Fleet]
-Conflicts=%p@.*service
+Conflicts=%p@*.service
 
 # fleetctl stop elasticsearch_logging@{1..2}.service
 # fleetctl destroy elasticsearch_logging@.service
