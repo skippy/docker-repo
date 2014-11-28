@@ -169,6 +169,13 @@ class Util(object):
 
 
     @classmethod
+    def handle_exception(cls, e):
+        # catastrophic error. bail.
+        Util.print_msg(type(e))
+        Util.print_msg(e)
+        Util.print_msg(traceback.format_exc())
+
+    @classmethod
     def parse_inputs(cls):
         parser = argparse.ArgumentParser(description='Help manage services, such as register in a discovery service, setup security certificates, and monitor a service')
         subparsers = parser.add_subparsers(dest='cmd')#(title='my title', description='my description', help='my help')
@@ -254,8 +261,7 @@ def watch(args):
             time.sleep(20)
     except Exception as e:
         # catastrophic error. bail.
-        Util.print_msg(type(e))
-        Util.print_msg(e)
+        Util.handle_exception(e)
         sys.exit(1)
 
 
@@ -269,8 +275,7 @@ def hosts(args):
             sys.exit(1)
     except Exception as e:
         # catastrophic error. bail.
-        Util.print_msg(type(e), sys.stderr)
-        Util.print_msg(e, sys.stderr)
+        Util.handle_exception(e)
         sys.exit(1)
 
 
@@ -294,8 +299,7 @@ def cert(args):
             return
     except Exception as e:
         # catastrophic error. bail.
-        Util.print_msg(type(e), sys.stderr)
-        Util.print_msg(e, sys.stderr)
+        Util.handle_exception(e)
         sys.exit(1)
 
 
