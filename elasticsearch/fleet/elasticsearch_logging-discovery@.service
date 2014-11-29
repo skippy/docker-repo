@@ -27,8 +27,8 @@ EnvironmentFile=/etc/environment
 
 # Pre-start and Start
 ## Directives with "=-" are allowed to fail without consequence
-ExecStartPre=-/usr/bin/docker kill %p-%i
-ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=-/usr/bin/docker kill %p-%i 2>/dev/null
+ExecStartPre=-/usr/bin/docker rm %p-%i 2>/dev/null
 ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
 ExecStart=/bin/bash -c '\
   /usr/bin/docker run \
