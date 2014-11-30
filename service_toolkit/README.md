@@ -64,7 +64,7 @@ docker run skippy/service_toolkit watch \
 * Help: `docker run skippy/service_toolkit cert --help`
 
 * Acquire a x509 set of certificates, returned in a json object.  The certs are created if they do not already exist:
-`docker run skippy/service_toolkit cert --label=MyService --service-id=MyService-0x3241dc3 --x509`
+`docker run skippy/service_toolkit cert --label=MyService --x509`
 
 
 Usage: Fleet

@@ -13,7 +13,8 @@ import signal
 import time
 import subprocess
 import socket
-
+import tempfile
+import traceback
 import urllib
 import requests
 import boto3
@@ -50,18 +51,20 @@ class Toolkit(object):
         requests.put(self.config.etcd_service_key_url(), {'value':etcd_service_value, 'ttl':30} )
 
 
-    def acquire_lease(self, scope=''):
+    def acquire_lease(self, scope='', lease_holder=None):
+        lease_holder = lease_holder or self.config.service_id
         timeout = time.time() + self.config.acquire_timeout
         while time.time() < timeout:
-            response = requests.put(self.config.etcd_lock_url(scope) + "?prevExist=false", {'value': self.config.service_id, 'ttl':self.config.lease_timeout} )
+            response = requests.put(self.config.etcd_lock_url(scope) + "?prevExist=false", {'value': lease_holder, 'ttl':self.config.lease_timeout} )
             if response.ok:
                 return True
             time.sleep(1)
         return False
 
 
-    def release_lease(self, scope=''):
-        return requests.delete(self.config.etcd_lock_url(scope) + '?prevValue={0}'.format(urllib.quote_plus(self.config.service_id)))
+    def release_lease(self, scope='', lease_holder=None):
+        lease_holder = lease_holder or self.config.service_id
+        return requests.delete(self.config.etcd_lock_url(scope) + '?prevValue={0}'.format(urllib.quote_plus(lease_holder)))
 
 
     def retrieve_certs(self):
@@ -77,25 +80,33 @@ class Toolkit(object):
 
 
     def create_x509_certs(self):
+        key_tempfile, cert_tempfile = (None, None)
+        hostname = '{0}_{1}'.format(socket.gethostname(), os.getpid())
+        # random = os.urandom(128)
+        # print(random.encode('base-64'))
+        # openssl pkcs12 -name test -export -in /tmp/test.crt -inkey /tmp/test.key -out /tmp/test.p12
         try:
-            if self.acquire_lease('x509'):
+            if self.acquire_lease('x509', hostname):
                 certs = self.retrieve_certs()
-                if certs:
+                if certs and certs['key'] and certs['cert']:
                     return certs 
-                key_filename  = "/tmp/{0}.key".format(self.config.label)
-                cert_filename = "/tmp/{0}.crt".format(self.config.label)
-                os.system("openssl req -x509 -batch -nodes -newkey rsa:4096 -keyout {0} -out {1} 2>/dev/null".format(key_filename, cert_filename))
-                private_key = open(key_filename,'r').read()
-                cert        = open(cert_filename,'r').read()
+                key_tempfile = tempfile.NamedTemporaryFile()
+                cert_tempfile = tempfile.NamedTemporaryFile()
+                cmd = "openssl req -x509 -batch -nodes -newkey rsa:4096 -keyout {0} -out {1} 2>/dev/null".format(key_tempfile.name, cert_tempfile.name)
+                output = os.system(cmd)
+                private_key = key_tempfile.read()
+                cert        = cert_tempfile.read()
                 requests.put("{0}x509_private_key".format(self.config.etcd_cert_keys_url()), {'value': private_key} )
                 requests.put("{0}x509_certificate".format(self.config.etcd_cert_keys_url()), {'value': cert} )
-                # requests.put(self.config.etcd_service_key_url(), {'value':etcd_service_value, 'ttl':30} )
-
                 return {'key': private_key, 'cert': cert, 'type': 'x509'}
             else:
                 return None
         finally:
-            self.release_lease('x509')
+            self.release_lease('x509', hostname)
+            if key_tempfile: 
+                key_tempfile.close()
+            if cert_tempfile:
+                cert_tempfile.close()
 
 
     def hosts(self):
@@ -208,9 +219,9 @@ class Util(object):
         # A cert command
         cert_parser = subparsers.add_parser('cert', help='retrieve security certificate')
         cert_parser.set_defaults(func=cert)
-        cert_parser.add_argument('--label', metavar='<LABEL>', required=True, help='General label of the Service to monitor.')
-        cert_parser.add_argument('--service-id', metavar='<SERVICE-ID>', required=True, help='The specific id of the service to monitor.')
-        cert_parser.add_argument('--x509', action='store_true')
+        cert_parser.add_argument('--label', metavar='<LABEL>', required=True, help='General label of the Service to retrieve security credentials for.')
+        cert_parser.add_argument('--x509', action='store_true', help='retrieve x509 certificate and key')
+        cert_parser.add_argument('--PKCS12', action='store_true', help='retrieve keystore')
         cert_parser.add_argument('--lease-timeout', metavar='<LEASE-TIMEOUT>', type=int, help='How long until the lease expires', default=240)
         cert_parser.add_argument('--acquire-timeout', metavar='<ACQUIRE-TIMEOUT>', type=int, help='How long until the lease expires', default=360)
 
@@ -273,7 +284,7 @@ def hosts(args):
             if hosts:
                 print( ','.join(str(x) for x in hosts) )
                 sys.exit(0)
-            elif not args.wait
+            elif not args.wait:
                 sys.exit(1)
 
     except Exception as e:
@@ -286,7 +297,7 @@ def hosts(args):
 def cert(args):
     try:
         certs = toolkit.retrieve_certs()
-        if not certs:
+        if not (certs and certs['key'] and certs['cert']):
             if config.x509:
                 certs = toolkit.create_x509_certs()
                 if not certs:
