@@ -41,7 +41,7 @@ ExecStart=/bin/bash -xc "exec /usr/bin/docker run --name %p-%H \
                                                 arcus/kibana:latest"
 
 ExecStop=/usr/bin/docker stop %p-%H
-ExecStop=/usr/bin/docker rm %p-%H
+ExecStop=-/usr/bin/docker rm %p-%H
 
 
 [X-Fleet]

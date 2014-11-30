@@ -41,7 +41,7 @@ ExecStart=/usr/bin/docker run \
       --service-info='{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%H"}'
 
 ExecStop=/usr/bin/docker stop -t 10 %p-%H
-ExecStop=/usr/bin/docker rm %p-%H
+ExecStop=-/usr/bin/docker rm %p-%H
 
 
 [X-Fleet]

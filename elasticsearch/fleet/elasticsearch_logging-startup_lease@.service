@@ -28,7 +28,7 @@ ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
 #if this fails, lets continue on and not hold up the rest of the process
 ExecStart=-/usr/bin/docker run --rm --name %p-%H skippy/service_toolkit acquire-lease --label=elasticsearch_logging --service-id=elasticsearch_logging-%H --host-ip=${COREOS_PRIVATE_IPV4}
 
-ExecStop=/usr/bin/docker rm %p-%H
+ExecStop=-/usr/bin/docker rm %p-%H
 
 
 [X-Fleet]
