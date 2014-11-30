@@ -28,7 +28,15 @@ EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p-%H
 ExecStartPre=-/usr/bin/docker rm %p-%H
 ExecStartPre=/usr/bin/docker pull skippy/logstash
-ExecStart=/usr/bin/docker run --rm --name %p-%H -p 10514:514 -p 10514:514/udp skippy/logstash
+ExecStart=/bin/bash -xc "\
+	/usr/bin/journalctl -f -o json | \
+	/usr/bin/docker run \
+	--rm \
+	--name %p-%H \
+	--hostname %p-%H \
+	-p 10514:514 -p 10514:514/udp \
+	skippy/logstash "
+
 
 ExecStop=/usr/bin/docker stop -t 20 %p-%H
 ExecStop=/usr/bin/docker rm %p-%H
