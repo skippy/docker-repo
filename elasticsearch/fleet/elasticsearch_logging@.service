@@ -22,7 +22,7 @@
 #  
 # Opens Ports 9200 (HTTP) and 9300 (transport)
 [Unit]
-Description=%p-%i
+Description=%p-%H
 
 # Requirements
 Requires=etcd.service
@@ -51,12 +51,12 @@ EnvironmentFile=/etc/environment
 
 # Pre-start and Start
 ## Directives with "=-" are allowed to fail without consequence
-ExecStartPre=-/usr/bin/docker kill %p-%i
-ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
 ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
 ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
 ExecStartPre=/usr/bin/docker pull busybox
-ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%i" 
+ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%H" 
 
 # lets:
 #  - startup individual nodes in a serial manner;
@@ -79,13 +79,13 @@ ExecStart=/bin/bash -c '\
     fi; \
 	/usr/bin/docker run \
 		--rm \
-		--name %p-%i \
+		--name %p-%H \
 		--volumes-from esldata \
 		-p 9200:9200 -p 9300:9300 \
 		skippy/elasticsearch \
 		/elasticsearch/bin/elasticsearch \
-			-Des.default.cluster.name=Logging \
-			-Des.default.node.name=%p-%i \
+			-Des.default.cluster.name=logstash \
+			-Des.default.node.name=%p-%H \
 			-Des.default.bootstrap.mlockall=true \
 			-Des.default.transport.tcp.compress=true \
 			-Des.default.http.cors.enabled=true \
@@ -94,9 +94,8 @@ ExecStart=/bin/bash -c '\
 			-Des.default.discovery.zen.ping.multicast.enabled=false \
 			-Des.default.discovery.zen.ping.unicast.hosts=$UNICAST_HOSTS'
 
-ExecStop=/usr/bin/docker stop -t 10 %p-monitor_lock-%i
-ExecStop=/usr/bin/docker stop -t 30 %p-%i
-
+ExecStop=/usr/bin/docker stop -t 30 %p-%H
+ExecStop=/usr/bin/docker rm %p-%H
 
 [X-Fleet]
 Conflicts=%p@*.service

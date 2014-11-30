@@ -1,5 +1,5 @@
 [Unit]
-Description=Elasticsearch Discovery Service %i
+Description=Elasticsearch Discovery Service
 
 # Requirements
 Requires=etcd.service
@@ -27,21 +27,21 @@ EnvironmentFile=/etc/environment
 
 # Pre-start and Start
 ## Directives with "=-" are allowed to fail without consequence
-ExecStartPre=-/usr/bin/docker kill %p-%i 2>/dev/null
-ExecStartPre=-/usr/bin/docker rm %p-%i 2>/dev/null
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
 ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
-ExecStart=/bin/bash -c '\
-  /usr/bin/docker run \
+ExecStart=/usr/bin/docker run \
     --rm \
-    --name %p-%i \
+    --name %p-%H \
     skippy/service_toolkit watch \
       --label="elasticsearch_logging" \
-      --service-id="elasticsearch_logging-%i" \
+      --service-id="elasticsearch_logging-%H" \
       --host-ip=${COREOS_PRIVATE_IPV4} \
       --monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
-      --service-info=\'{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%i"}\' '
+      --service-info='{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%H"}'
 
-ExecStop=/usr/bin/docker stop -t 10 %p-%i
+ExecStop=/usr/bin/docker stop -t 10 %p-%H
+ExecStop=/usr/bin/docker rm %p-%H
 
 
 [X-Fleet]

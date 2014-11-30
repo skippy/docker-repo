@@ -14,19 +14,21 @@ Before=elasticsearch_logging@%i.service
 [Service]
 #prevent SystemD from starting other units until this one exits
 Type=oneshot
-Restart=no
+RemainAfterExit=no
 
 # Get CoreOS environmental variables
 EnvironmentFile=/etc/environment
 
 # Pre-start and Start
 ## Directives with "=-" are allowed to fail without consequence
-ExecStartPre=-/usr/bin/docker kill %p-%i 2>/dev/null
-ExecStartPre=-/usr/bin/docker rm %p-%i 2>/dev/null
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
 ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
 ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
 #if this fails, lets continue on and not hold up the rest of the process
-ExecStart=-/usr/bin/docker run --rm --name %p-%i skippy/service_toolkit acquire-lease --label=elasticsearch_logging --service-id=elasticsearch_logging-%i --host-ip=${COREOS_PRIVATE_IPV4}
+ExecStart=-/usr/bin/docker run --rm --name %p-%H skippy/service_toolkit acquire-lease --label=elasticsearch_logging --service-id=elasticsearch_logging-%H --host-ip=${COREOS_PRIVATE_IPV4}
+
+ExecStop=/usr/bin/docker rm %p-%H
 
 
 [X-Fleet]
