@@ -29,3 +29,20 @@ For anything dealing with clustering, they currently are:
 * ETCD & Fleet
 * [Skippy/ServiceToolkit](https://registry.hub.docker.com/u/skippy/service_toolkit/)
 
+
+
+<a name="details"></a>
+Details & Gotchas:
+-------------------------
+ES is not secure by default and thus does not meet numerous regulatory and compliance requirements.  Options include:
+
+* waiting for [ES Shield](http://www.elasticsearch.com/products/shield/)
+* futz around with [elasticsearch-jetty](https://github.com/sonian/elasticsearch-jetty)
+* ditto with [elasticsearch-security-plugin](https://github.com/salyh/elasticsearch-security-plugin)
+
+
+
+<a name="todos"></a>
+TODOs:
+-------------------------
+* figure out a security picture
