@@ -203,6 +203,7 @@ class Util(object):
         host_parser = subparsers.add_parser('hosts', help='list hosts')
         host_parser.set_defaults(func=hosts)
         host_parser.add_argument('--label', metavar='<LABEL>', required=True, help='General label of the Service to monitor.')
+        host_parser.add_argument('--wait', action='store_true', help='wait until there is at least one host returned.')
 
         # A cert command
         cert_parser = subparsers.add_parser('cert', help='retrieve security certificate')
@@ -267,12 +268,14 @@ def watch(args):
 
 def hosts(args):
     try:
-        hosts = toolkit.hosts()
-        if hosts:
-            print( ','.join(str(x) for x in hosts) )
-            sys.exit(0)
-        else: 
-            sys.exit(1)
+        while True:
+            hosts = toolkit.hosts()
+            if hosts:
+                print( ','.join(str(x) for x in hosts) )
+                sys.exit(0)
+            elif not args.wait
+                sys.exit(1)
+
     except Exception as e:
         # catastrophic error. bail.
         Util.handle_exception(e)
