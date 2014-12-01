@@ -1,6 +1,6 @@
 # https://github.com/progrium/logspout
 [Unit]
-Description=logspout container to run on every host
+Description=logspout container for every host
 
 # Requirements
 Requires=etcd.service
@@ -32,8 +32,8 @@ ExecStartPre=/usr/bin/docker pull progrium/logspout
 ExecStart=/usr/bin/docker run \
 		--rm \
 		-p 8000:8000 \
-		--name logspout \
-    	--hostname logspout-%h \
+		--name %p \
+    	--hostname %p-%h \
         --volume /var/run/docker.sock:/tmp/docker.sock \
 		progrium/logspout:latest syslog://${COREOS_PRIVATE_IPV4}:10514"
 
