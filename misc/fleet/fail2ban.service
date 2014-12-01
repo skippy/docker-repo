@@ -1,0 +1,30 @@
+[Unit]
+Description=Fail2ban systemd monitoring service
+After=docker.service
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/usr/bin/docker pull ianblenke/fail2ban
+
+ExecStart=/usr/bin/docker run \
+			--name %p \
+			--privileged \
+			--net=host \
+			-v /run/systemd:/var/run/systemd \
+			ianblenke/fail2ban
+
+ExecStop=/usr/bin/docker stop -t 10 %p
+ExecStop=/usr/bin/docker rm %p
+
+[X-Fleet]
+Global=true
