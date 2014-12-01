@@ -1,0 +1,41 @@
+[Unit]
+Description=Grafana Service
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=influxdb@1.service
+
+# Dependency ordering
+After=etcd.service
+After=docker.service
+After=influxdb@1.service
+
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/usr/bin/docker pull tutum/grafana
+ExecStart=/usr/bin/docker run \
+  --name %p \
+  -p 8080:80 \
+  -e INFLUXDB_HOST=${COREOS_PRIVATE_IPV4} \
+  -e INFLUXDB_NAME=k8s \
+  -e HTTP_PASS=mypass \
+  -e INFLUXDB_IS_GRAFANADB=true \
+  tutum/grafana
+
+ExecStop=/usr/bin/docker stop -t 10 %p
+ExecStop=/usr/bin/docker rm %p
+
+[X-Fleet]
+MachineOf=influxdb@1.service

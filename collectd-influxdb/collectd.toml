@@ -1,0 +1,8 @@
+[template]
+src	= "collectd.conf.tmpl"
+dest	= "/etc/collectd/collectd.conf"
+keys	= [
+    "/services/influxdb/hosts/"
+]
+#check_cmd  = "/usr/sbin/collectd -t -C /etc/collectd/collectd.conf"
+reload_cmd = "/usr/sbin/collectd -f -C /etc/collectd/collectd.conf -P /var/run/collectd.pid"

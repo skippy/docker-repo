@@ -1,0 +1,10 @@
+{
+"spaces": [{
+      "name": "default",
+      "retentionPolicy": "60d",
+      "shardDuration": "1d",
+      "regex": "/.*/",
+      "replicationFactor": 3,
+      "split": 2
+    }]
+}

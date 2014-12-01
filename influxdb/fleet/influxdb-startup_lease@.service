@@ -1,0 +1,38 @@
+[Unit]
+Description=Influxdb Sequential Startup
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=influxdb@%i.service
+
+# Dependency ordering
+After=etcd.service
+Before=influxdb@%i.service
+
+ 
+[Service]
+#prevent SystemD from starting other units until this one exits
+Type=oneshot
+RemainAfterExit=no
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
+ExecStartPre=/usr/bin/docker pull skippy/influxdb
+#if this fails, lets continue on and not hold up the rest of the process
+ExecStart=-/usr/bin/docker run --rm --name %p-%H skippy/service_toolkit acquire-lease --label=influxdb --host-ip=${COREOS_PRIVATE_IPV4} --service-id=influxdb-%H
+
+
+ExecStop=-/usr/bin/docker rm %p-%H
+
+
+[X-Fleet]
+# Schedule on the same machine as the associated hello service
+MachineOf=influxdb@%i.service
+

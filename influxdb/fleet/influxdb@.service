@@ -1,0 +1,69 @@
+# NOTES:
+#  - if the influxDB /data/.pre_db_created file exists, you won't be able to create databases
+[Unit]
+Description=%p-%H
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Wants=influxdb-startup_lease@%i.service
+Wants=influxdb-discovery@%i.service
+
+# Dependency ordering
+After=etcd.service
+After=docker.service
+After=influxdb-startup_lease@%i.service
+Before=influxdb-discovery@%i.service
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+# have SystemD restart the service if it goes down
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
+ExecStartPre=/usr/bin/docker pull skippy/influxdb
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
+ExecStartPre=/usr/bin/docker pull busybox
+ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name influxdata busybox /bin/echo "Data volume container for %p-%H" 
+
+# setup:
+#  - connect into cluster if other influx nodes exist
+#  - if this is the first node, create the k8s series, which is used by heapadvisor
+ExecStart=/bin/bash -c '\
+	HOSTS=$(/usr/bin/docker run --rm skippy/service_toolkit hosts \
+			--label=%p \
+			--host-ip=${COREOS_PRIVATE_IPV4} \
+		| sed "s/$/:8090/" \
+		| paste -s -d","); \
+	OPTS=" --name %p-%H \
+    	--volumes-from influxdata \
+		-p 8083:8083 -p 8086:8086 \
+		-p 8090:8090 -p 8099:8099 \
+		-p 25826:25826/udp \
+		-e REPLI_FACTOR=3 \
+		-e PRE_CREATE_DB=\"k8s\;collectd\" \
+		-e FORCE_HOSTNAME=\"${COREOS_PRIVATE_IPV4}\" "; \
+	if [ "$HOSTS" = "" ]; then \
+		systemd-cat -t "[%p]" echo "Initial cluster node"; \
+	else \
+		systemd-cat -t "[%p]" echo "Connecting to cluster hosts: $HOSTS"; \
+		OPTS+=" -e SEEDS=\"$HOSTS\" "; \
+    fi; \
+    echo "-------------------------------------------"; \
+    echo $OPTS; \
+	/usr/bin/docker run $OPTS skippy/influxdb:latest \
+
+ExecStop=/usr/bin/docker stop -t 30 %p-%H
+ExecStop=/usr/bin/docker rm %p-%H
+
+[X-Fleet]
+Conflicts=%p@*.service

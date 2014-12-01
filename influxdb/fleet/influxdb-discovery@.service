@@ -1,0 +1,49 @@
+[Unit]
+Description=InfluxDB Discovery Service
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=influxdb@%i.service
+
+# Dependency ordering
+After=etcd.service
+After=influxdb@%i.service
+BindsTo=influxdb@%i.service
+
+ 
+[Service]
+# Let processes take awhile to start up (for first run Docker containers)
+TimeoutStartSec=10m
+# keep kill mode, but lets give docker plenty of chances to stop cleanly
+TimeoutStopSec=90s
+
+# have SystemD restart the service if it goes down
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
+ExecStart=/bin/bash -c '\
+	/usr/bin/docker run \
+    	--name %p-%H \
+	    skippy/service_toolkit watch \
+	      --label="influxdb" \
+     	  --host-ip=${COREOS_PRIVATE_IPV4} \
+     	  --service-id=influxdb-%H \
+	      --monitor-url="http://${COREOS_PRIVATE_IPV4}:8086/ping" '
+
+ExecStop=/usr/bin/docker stop -t 10 %p-%H
+ExecStop=-/usr/bin/docker rm %p-%H
+
+
+[X-Fleet]
+# Schedule on the same machine as the associated hello service
+MachineOf=influxdb@%i.service
+

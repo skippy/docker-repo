@@ -1,0 +1,35 @@
+[Unit]
+Description=Heapster Agent Service
+Requires=docker.service
+Requires=heapster-agent.service
+
+After=docker.service
+After=heapster-agent.service
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/usr/bin/docker pull kubernetes/heapster
+ExecStart=/usr/bin/docker run \
+			--name %p \
+			--net host \
+			-e INFLUXDB_HOST=${COREOS_PRIVATE_IPV4}:8086 \
+			-v /home/core/heapster:/var/run/heapster \
+			kubernetes/heapster \
+				-v=2 \
+				-logtostderr=true
+
+ExecStop=/usr/bin/docker stop -t 10 %p
+ExecStop=/usr/bin/docker rm %p
+
+[X-Fleet]
+MachineOf=influxdb@1.service

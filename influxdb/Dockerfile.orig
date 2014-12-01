@@ -1,0 +1,65 @@
+#influenced by tutum/influxdb
+FROM debian:wheezy
+MAINTAINER  Adam Greene <adam.greene@gmail.com>
+
+ENV INFLUXDB_VERSION 0.8.7
+
+# RUN apt-get update -y && \
+#	apt-get install -y -q --no-install-recommends \
+#		wget && \
+#	apt-get clean && \
+#	rm -rf /var/lib/apt/lists/*
+
+
+
+ADD https://s3.amazonaws.com/influxdb/influxdb_${INFLUXDB_VERSION}_amd64.deb /tmp/influxdb_${INFLUXDB_VERSION}_amd64.deb
+RUN echo "15bbc48981e1a983f651a02e4935260960edc2ca  /tmp/influxdb_${INFLUXDB_VERSION}_amd64.deb" > /tmp/influxdb.sha1 && \
+	sha1sum --check /tmp/influxdb.sha1 && \
+	dpkg -i /tmp/influxdb_${INFLUXDB_VERSION}_amd64.deb && \
+ 	rm /tmp/* && \
+ 	rm -rf /var/lib/apt/lists/*
+
+ADD config.toml /config/config.toml
+ADD shardSpace.json /config/shardSpace.json
+
+ADD run.sh /run.sh
+RUN chmod +x /run.sh
+
+ENV PRE_CREATE_DB k8s
+
+EXPOSE 8083 8086 8084 8090 8099
+
+VOLUME ["/data"]
+
+CMD ["/run.sh"]
+
+
+
+ADD run.sh /run.sh
+RUN chmod +x /*.sh
+
+ENV PRE_CREATE_DB **None**
+ENV SSL_SUPPORT **False**
+ENV SSL_CERT **None**
+
+# Admin server
+EXPOSE 8083
+
+# HTTP API
+EXPOSE 8086
+
+# HTTPS API
+EXPOSE 8084
+
+# Raft port (for clustering, don't expose publicly!)
+EXPOSE 8090
+
+# Protobuf port (for clustering, don't expose publicly!)
+EXPOSE 8099
+
+VOLUME ["/data"]
+
+# RUN curl -s -o /tmp/influxdb_${INFLUXDB_VERSION}_amd64.deb https://s3.amazonaws.com/influxdb/influxdb_${INFLUXDB_VERSION}_amd64.deb && \
+#  dpkg -i /tmp/influxdb_latest_amd64.deb && \
+#  rm /tmp/influxdb_latest_amd64.deb && \
+#  rm -rf /var/lib/apt/lists/*

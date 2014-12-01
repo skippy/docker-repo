@@ -1,0 +1,36 @@
+[Unit]
+Description=Heapster InfluxDB Proxy Service
+Requires=docker.service
+Requires=heapster-agent.service
+
+After=docker.service
+After=heapster-agent.service
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
+ExecStart=/usr/bin/docker run \
+			--name %p \
+			--net host \
+			skippy/service_toolkit proxy \
+				--service-label=influxdb \
+				--local-port=8086 \
+				--host-ip=${COREOS_PRIVATE_IPV4} \
+				--service-port=8086
+
+ExecStop=/usr/bin/docker stop -t 10 %p
+ExecStop=/usr/bin/docker rm %p
+
+[X-Fleet]
+MachineOf=heapster.service
+Conflicts=influxdb*

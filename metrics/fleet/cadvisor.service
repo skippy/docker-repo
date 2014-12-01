@@ -1,0 +1,35 @@
+[Unit]
+Description=cAdvisor Service
+
+Requires=docker.service
+After=docker.service
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/usr/bin/docker pull google/cadvisor
+#	--net=host 
+ExecStart=/usr/bin/docker run \
+				--name %p \
+				--volume=/var/run:/var/run:rw \
+				--volume=/sys:/sys:ro \
+				--volume=/var/lib/docker/:/var/lib/docker:ro \
+				--publish=4194:4194 \
+				google/cadvisor \
+					--logtostderr \
+					--port=4194
+
+ExecStop=/usr/bin/docker stop -t 10 %p
+ExecStop=/usr/bin/docker rm %p
+
+[X-Fleet]
+Global=true
