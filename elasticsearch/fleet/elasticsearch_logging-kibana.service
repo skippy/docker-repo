@@ -36,7 +36,7 @@ ExecStart=/bin/bash -xc "exec /usr/bin/docker run --name %p-%H \
                                                 --hostname %p-%H \
                                                 --publish 8090:80 \
                                                 -e ES_SCHEME=http \
-                                                -e ES_HOST=localhost \
+                                                -e ES_HOST=${COREOS_PRIVATE_IPV4} \
                                                 -e ES_PORT=9200 \
                                                 arcus/kibana:latest"
 
