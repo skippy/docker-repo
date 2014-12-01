@@ -14,9 +14,9 @@ BindsTo=elasticsearch_logging@%i.service
  
 [Service]
 # Let processes take awhile to start up (for first run Docker containers)
-TimeoutStartSec=0
+TimeoutStartSec=10m
 # keep kill mode, but lets give docker plenty of chances to stop cleanly
-TimeoutStopSec=90
+TimeoutStopSec=90s
 
 # have SystemD restart the service if it goes down
 Restart=always
@@ -30,15 +30,15 @@ EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p-%H
 ExecStartPre=-/usr/bin/docker rm %p-%H
 ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
-ExecStart=/usr/bin/docker run \
-    --rm \
-    --name %p-%H \
-    skippy/service_toolkit watch \
-      --label="elasticsearch_logging" \
-      --service-id="elasticsearch_logging-%H" \
-      --host-ip=${COREOS_PRIVATE_IPV4} \
-      --monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
-      --service-info='{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%H"}'
+ExecStart=/bin/bash -c '\
+	/usr/bin/docker run \
+    	--name %p-%H \
+	    skippy/service_toolkit watch \
+	      --label="elasticsearch_logging" \
+    	  --service-id="elasticsearch_logging-%H" \
+     	  --host-ip=${COREOS_PRIVATE_IPV4} \
+	      --monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
+    	  --service-info='{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%H"}\' '
 
 ExecStop=/usr/bin/docker stop -t 10 %p-%H
 ExecStop=-/usr/bin/docker rm %p-%H

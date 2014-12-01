@@ -38,9 +38,9 @@ Before=elasticsearch_logging-discovery@%i.service
 
 [Service]
 # Let processes take awhile to start up (for first run Docker containers)
-TimeoutStartSec=0
+TimeoutStartSec=10m
 # keep kill mode, but lets give docker plenty of chances to stop cleanly
-TimeoutStopSec=90
+TimeoutStopSec=90s
 
 # have SystemD restart the service if it goes down
 Restart=always
@@ -78,7 +78,6 @@ ExecStart=/bin/bash -c '\
 		systemd-cat -t "[%p]" echo "Connecting to cluster hosts: $UNICAST_HOSTS"; \
     fi; \
 	/usr/bin/docker run \
-		--rm \
 		--name %p-%H \
 		--volumes-from esldata \
 		-p 9200:9200 -p 9300:9300 \
@@ -99,7 +98,6 @@ ExecStop=/usr/bin/docker rm %p-%H
 
 [X-Fleet]
 Conflicts=%p@*.service
-
 # fleetctl stop elasticsearch_logging@{1..2}.service
 # fleetctl destroy elasticsearch_logging@.service
 # fleetctl submit share/elasticsearch/fleet/elasticsearch_logging@.service

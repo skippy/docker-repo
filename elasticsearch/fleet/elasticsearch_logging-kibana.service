@@ -17,9 +17,9 @@ BindsTo=elasticsearch_logging@1.service
 
 [Service]
 # Let processes take awhile to start up (for first run Docker containers)
-TimeoutStartSec=0
+TimeoutStartSec=10m
 # keep kill mode, but lets give docker plenty of chances to stop cleanly
-TimeoutStopSec=90
+TimeoutStopSec=90s
 
 # have SystemD restart the service if it goes down
 Restart=always
