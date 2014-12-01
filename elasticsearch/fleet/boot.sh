@@ -37,4 +37,6 @@ fleetctl load \
 	elasticsearch_logging-kibana.service
 
 echo "starting elasticsearch_logging"
-fleetctl start elasticsearch_logging@{1..2}.service
+fleetctl start \
+	elasticsearch_logging@{1..2}.service
+	# elasticsearch_logging-kibana.service
