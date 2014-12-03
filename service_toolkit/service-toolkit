@@ -22,6 +22,9 @@ import json
 
 
 
+# lets setup stdout to not have any write buffer
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
 
 
 class Toolkit(object):
@@ -46,16 +49,25 @@ class Toolkit(object):
         requests.delete(self.config.etcd_service_key_url())
 
 
-    def register_service(self):
-        etcd_service_value   = '{"name": "%s", "host": "%s"}' % (self.config.service_id, self.config.host_ip)
-        requests.put(self.config.etcd_service_key_url(), {'value':etcd_service_value, 'ttl':30} )
+    def register_service(self, ttl):
+        etcd_service_value   = {'host': self.config.service_id, 'label': self.config.label, 'ip': self.config.host_ip}
+        if hasattr(self.config, 'service_info'):
+            for item in self.config.service_info:
+                key, value = item.split('=')
+                if key and value:
+                    etcd_service_value[key] = value
+        requests.put(self.config.etcd_service_key_url(), {'value':json.dumps(etcd_service_value), 'ttl':ttl} )
 
 
     def acquire_lease(self, scope='', lease_holder=None):
+        # print("acquire_lease ------------------------ {0} ---- {1}".format(lease_holder, self.config.service_id))
         lease_holder = lease_holder or self.config.service_id
         timeout = time.time() + self.config.acquire_timeout
         while time.time() < timeout:
             response = requests.put(self.config.etcd_lock_url(scope) + "?prevExist=false", {'value': lease_holder, 'ttl':self.config.lease_timeout} )
+            if response.ok:
+                return True
+            response = requests.put(self.config.etcd_lock_url(scope) + '?prevValue={0}'.format(urllib.quote_plus(lease_holder)), {'value': lease_holder, 'ttl':self.config.lease_timeout} )
             if response.ok:
                 return True
             time.sleep(1)
@@ -63,6 +75,7 @@ class Toolkit(object):
 
 
     def release_lease(self, scope='', lease_holder=None):
+        # print("release_lease ------------------------ {0} ---- {1}".format(lease_holder, self.config.service_id))
         lease_holder = lease_holder or self.config.service_id
         return requests.delete(self.config.etcd_lock_url(scope) + '?prevValue={0}'.format(urllib.quote_plus(lease_holder)))
 
@@ -73,15 +86,15 @@ class Toolkit(object):
             response.encoding = 'UTF-8'
             json = response.json()
             if 'nodes' in json['node']:
-                private_key = (item for item in json['node']['nodes'] if item["key"] == "/certs/{0}/x509_private_key".format(self.config.label)).next()['value']
-                cert        = (item for item in json['node']['nodes'] if item["key"] == "/certs/{0}/x509_certificate".format(self.config.label)).next()['value']
+                private_key = (item for item in json['node']['nodes'] if item["key"] == "/config/{0}/certs/x509_private_key".format(self.config.label)).next()['value']
+                cert        = (item for item in json['node']['nodes'] if item["key"] == "/config/{0}/certs/x509_certificate".format(self.config.label)).next()['value']
                 return {'key': private_key, 'cert': cert, 'type': 'x509'}
         return None
 
 
     def create_x509_certs(self):
         key_tempfile, cert_tempfile = (None, None)
-        hostname = '{0}_{1}'.format(socket.gethostname(), os.getpid())
+        hostname = '{0}_{1}'.format(Util.host_name(), os.getpid())
         # random = os.urandom(128)
         # print(random.encode('base-64'))
         # openssl pkcs12 -name test -export -in /tmp/test.crt -inkey /tmp/test.key -out /tmp/test.p12
@@ -93,7 +106,7 @@ class Toolkit(object):
                 key_tempfile = tempfile.NamedTemporaryFile()
                 cert_tempfile = tempfile.NamedTemporaryFile()
                 cmd = "openssl req -x509 -batch -nodes -newkey rsa:4096 -keyout {0} -out {1} 2>/dev/null".format(key_tempfile.name, cert_tempfile.name)
-                output = os.system(cmd)
+                os.system(cmd)
                 private_key = key_tempfile.read()
                 cert        = cert_tempfile.read()
                 requests.put("{0}x509_private_key".format(self.config.etcd_cert_keys_url()), {'value': private_key} )
@@ -116,11 +129,18 @@ class Toolkit(object):
         output=[]
         if response.ok and 'nodes' in json['node']:
             for i, node in enumerate(json['node']['nodes']):
-                output.append(node['key'].replace(self.config.etcd_service_hosts_path(), ''))
-
+                output.append(node['key'].replace(self.config.etcd_service_hosts_path() + '/', ''))
+        output.sort()
         return output
 
 
+    def create_base_configs(self):
+        try:
+            requests.put(self.config.etcd_config_url(), {'dir':'true'} )
+            requests.put(self.config.etcd_services_url(), {'dir':'true'} )
+        except requests.exceptions.ConnectionError as e:
+            print("failed to connect to {0}.  This is probably because the url is not accessible.".format(self.config.etcd_config_url()))
+            raise e
 
 
 class Config(object):
@@ -128,16 +148,13 @@ class Config(object):
     def __init__(self, args):
         super(Config, self).__init__()
         self.__dict__.update(vars(args))
-        self.label = self.label.lower()
-        process    = subprocess.Popen("ip route show 0.0.0.0/0 | grep -Eo 'via \S+' | awk '{ print $2 }'", stdout=subprocess.PIPE, shell=True)
+        if not hasattr(self, 'service_id') or not self.service_id:
+            self.service_id = Util.host_name()
+        if hasattr(self, 'label'):
+            self.label = self.label.lower()
+            # self.service_id = "{0}-{1}".format(self.label, self.service_id)
         if not self.host_ip:
-            # lets try docker way
-            process = subprocess.Popen("ip address show docker0 2>/dev/null | grep 'inet ' | awk '{gsub(/\/[0-9]{2}/, \"\"); print $2}'", stdout=subprocess.PIPE, shell=True)
-            self.host_ip = process.stdout.read().strip()
-        if not self.host_ip:
-            # lets try general IP way
-            process = subprocess.Popen("ip route show 0.0.0.0/0 | grep -Eo 'via \S+' | awk '{ print $2 }'", stdout=subprocess.PIPE, shell=True)
-            self.host_ip = process.stdout.read().strip()
+            self.host_ip = Util.host_ip()
 
 
     def etcd_lock_url(self, scope=''):
@@ -154,7 +171,7 @@ class Config(object):
 
 
     def etcd_service_hosts_path(self):
-        return '/services/{0}/hosts/'.format(self.label)
+        return '/services/{0}/hosts'.format(self.label)
 
 
     def etcd_service_hosts_url(self):
@@ -166,8 +183,15 @@ class Config(object):
 
 
     def etcd_cert_keys_url(self):
-        return '{0}/certs/{1}/'.format(self.etcd_base_url(), self.label)
+        return '{0}/{1}/certs'.format(self.etcd_config_url(), self.label)
 
+
+    def etcd_config_url(self):
+        return '{0}/config'.format(self.etcd_base_url())
+
+
+    def etcd_services_url(self):
+        return '{0}/services'.format(self.etcd_base_url())
 
 
 
@@ -176,7 +200,35 @@ class Util(object):
     @classmethod
     def print_msg(cls, message, file=sys.stdout):
         # os.system('systemd-cat -t "[{0}]" echo "{1}"'.format(args.label, message))
-        print("[{0}] {1}".format(args.label, message), file=file)
+        print("[{0}] {1}".format(config.label, message), file=file)
+
+
+    @classmethod
+    def host_name(cls):
+        import platform
+        # print("host_name1: {0}".format(platform.node()))
+        # print("host_name2: {0}".format(socket.gethostname()))
+        # print("host_name3: {0}".format(socket.gethostbyaddr(socket.gethostname())[0]))
+        return socket.gethostname()
+        # if socket.gethostname().find('.')>=0:
+        #     return socket.gethostname()
+        # else:
+        #     return socket.gethostbyaddr(socket.gethostname())[0]
+        # print("host_name4: {0}".format(name))
+        # print("host_name5: {0}".format(socket.getfqdn()))
+
+        # return socket.gethostname()
+
+
+    @classmethod
+    def host_ip(cls):
+        process = subprocess.Popen("ip address show docker0 2>/dev/null | grep 'inet ' | awk '{gsub(/\/[0-9]{2}/, \"\"); print $2}'", stdout=subprocess.PIPE, shell=True)
+        host_ip = process.stdout.read().strip()
+        if not host_ip:
+            # # lets try general IP way
+            process = subprocess.Popen("ip route show 0.0.0.0/0 | grep -Eo 'via \S+' | awk '{ print $2 }'", stdout=subprocess.PIPE, shell=True)
+            host_ip = process.stdout.read().strip()
+        return host_ip
 
 
     @classmethod
@@ -195,18 +247,18 @@ class Util(object):
         watch_parser = subparsers.add_parser('watch', help='watch for changes')
         watch_parser.set_defaults(func=watch)
         watch_parser.add_argument('--label', metavar='<LABEL>', required=True, help='General label of the Service to monitor.')
-        watch_parser.add_argument('--service-id', metavar='<SERVICE-ID>', required=True, help='The specific id of the service to monitor.')
+        watch_parser.add_argument('--service-id', metavar='<SERVICE-ID>', help='The specific id of the service to monitor.  It will default to <LABEL>-<HOSTNAME>')
         watch_parser.add_argument('--monitor-url', metavar='<MONITOR-URL>', required=True,
                             help='The URL to call to monitor the external process.  You can use an internally or ' + 
                                  'externally available URL, such as "http://172.17.8.101:9200", or one from a ' + 
                                  'linked container such as "http://service:9200".')
-        watch_parser.add_argument('--service-info', metavar='<SERVICE-INFO>', help='If nothing is added, defaults to "{"name": "<SERVICE-ID>"}".')
+        watch_parser.add_argument('--service-info', nargs='*', default=[], help='If nothing is added, defaults to name=<SERVICE-ID>.')
 
         # An aquire-lease command
         lease_parser = subparsers.add_parser('acquire-lease', help='Acquire a lease to start monitoring')
         lease_parser.set_defaults(func=acquire_lease)
         lease_parser.add_argument('--label', metavar='<LABEL>',           required=True, help='General label of the Service to monitor.')
-        lease_parser.add_argument('--service-id', metavar='<SERVICE-ID>', required=True, help='The specific id of the service to monitor.')
+        lease_parser.add_argument('--service-id', metavar='<SERVICE-ID>', help='The specific id of the service to monitor.  It will default to <LABEL>-<HOSTNAME>')
         lease_parser.add_argument('--lease-timeout', metavar='<LEASE-TIMEOUT>',     type=int, help='How long until the lease expires', default=240)
         lease_parser.add_argument('--acquire-timeout', metavar='<ACQUIRE-TIMEOUT>', type=int, help='How long to wait for a lease to become available', default=360)
 
@@ -215,6 +267,17 @@ class Util(object):
         host_parser.set_defaults(func=hosts)
         host_parser.add_argument('--label', metavar='<LABEL>', required=True, help='General label of the Service to monitor.')
         host_parser.add_argument('--wait', action='store_true', help='wait until there is at least one host returned.')
+
+        # act as a simple docker ambassador
+        #  
+        # docker run --rm --name=influxdb-amb --link influxdb:service influxdb:service skippy/service_toolkit ambassador# --port=2012 --link-label=influxdb
+        # docker run --rm --name=influxdb-proxy skippy/service_toolkit proxy --local-port=8086 --external-label=influxdb --external-port=8086
+        #
+        proxy_parser = subparsers.add_parser('proxy', help='act as an proxy')
+        proxy_parser.set_defaults(func=proxy)
+        proxy_parser.add_argument('--service-label', dest='label', required=True, help='The label of the service to link to')
+        proxy_parser.add_argument('--local-port', required=True, help='The port to expose for linking to the service')
+        proxy_parser.add_argument('--service-port', required=True, help='The label of the service to link to')
 
         # A cert command
         cert_parser = subparsers.add_parser('cert', help='retrieve security certificate')
@@ -234,6 +297,13 @@ class Util(object):
         return args
 
 
+
+def proxy(args):
+    new_env = os.environ.copy()
+    new_env['SERVICE_LABEL'] = toolkit.config.label.lower()
+    new_env['LOCAL_PORT'] = toolkit.config.local_port
+    new_env['SERVICE_PORT'] = toolkit.config.service_port
+    process = subprocess.call(["confd", "-watch", "-verbose=true"], env=new_env)
 
 
 def unregister_service(signum=None, frame=None):
@@ -259,18 +329,18 @@ def watch(args):
     try:
         while True:
             if toolkit.monitor_response().ok:
-                toolkit.register_service()
+                toolkit.register_service(8)
                 Util.print_msg("Instance is up")
                 if lease_released is False:
                     response = toolkit.release_lease()
                     if response.ok:
-                        Util.print_msg("Releasing acquire lock")
+                        Util.print_msg("Releasing lease")
                         lease_released=True
             else:
                 toolkit.unregister_service()
                 Util.print_msg("Instance {0} is not running and has been unregistered".format(config.service_id))
 
-            time.sleep(20)
+            time.sleep(5)
     except Exception as e:
         # catastrophic error. bail.
         Util.handle_exception(e)
@@ -285,7 +355,7 @@ def hosts(args):
                 print( ','.join(str(x) for x in hosts) )
                 sys.exit(0)
             elif not args.wait:
-                sys.exit(1)
+                sys.exit(0)
 
     except Exception as e:
         # catastrophic error. bail.
@@ -321,9 +391,6 @@ def cert(args):
 ############################################################################
 ## Run
 ############################################################################
-# lets setup stdout to not have any write buffer
-sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-
 # lets handle unix signals
 signal.signal(signal.SIGTERM, unregister_service)
 signal.signal(signal.SIGINT,  unregister_service)
@@ -332,6 +399,8 @@ signal.signal(signal.SIGINT,  unregister_service)
 args    = Util.parse_inputs()
 config = Config(args)
 toolkit = Toolkit(config)
+toolkit.create_base_configs()
+
 
 #trigger the assigned function call!
 args.func(args) 

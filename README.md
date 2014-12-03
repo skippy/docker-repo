@@ -4,4 +4,4 @@ docker-repo
 Lots of experimentation.  The current focus is on:
 
 * CoreOS, Fleet, and ETCD compatible
-* compatible with the future of AWS ECS
+* make sure the components can be reused in other scheduling systems, such as AWS ECS, Kubernetes, Docker Storm, etc.

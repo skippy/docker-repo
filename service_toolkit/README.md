@@ -9,6 +9,7 @@ tl;dr
 * service monitoring
 * enable sequential service startup
 * handle service security certificates (see [TODOS](#todos))
+* service proxy
 
 
 Summary
@@ -22,6 +23,7 @@ This is a docker container for helping with service discovery, monitoring, servi
 * **Service Discovery:** This will return a comma-delimited list of hosts that are currently up and running.
 * **Sequential Service Startup:** A lease can be grabbed, if available, or the command will block until a lease can be grabbed.  This can be used in conjunction with SystemD and Fleet to prevent services such as ElasticSearch from starting up at the same time and not correctly registering into a cluster.
 * **Service Certificate:** Create, store, and handle service security certificates.
+* **Service Proxy:** Allow access to a service via a local proxy that ties into the Service Discovery layer.
 
 
 **[Details & Gotchas](#details)** are listed below.
@@ -49,10 +51,12 @@ docker run skippy/service_toolkit watch \
 	--monitor-url="http://127.0.0.1:9200"
 ```
 
+
 ### Discovery
 * Help: `docker run skippy/service_toolkit hosts --help`
 
 * Return a comma-delimited list of hosts: `docker run skippy/service_toolkit hosts --label="MyService"`
+
 
 ### Startup Lease
 * Help: `docker run skippy/service_toolkit acquire-lease --help`
@@ -60,11 +64,20 @@ docker run skippy/service_toolkit watch \
 * Acquire a startup lease (return 0 on success, or blocks for timeout and then return 1 if lease was not able to be acquired):
 `docker run skippy/service_toolkit acquire-lease --label="MyService" --service-id="MyService-0x3241dc3"`
 
+
 ### Service Certificate
 * Help: `docker run skippy/service_toolkit cert --help`
 
 * Acquire a x509 set of certificates, returned in a json object.  The certs are created if they do not already exist:
 `docker run skippy/service_toolkit cert --label=MyService --x509`
+
+
+### Service Proxy
+* Help: `docker run skippy/service_toolkit proxy --help`
+
+* proxy to an external service that is already registered by the Monitoring service:
+`
+docker run --net=host skippy/service_toolkit proxy --service-label=MyService --local-port=9000 --service-port=9001`
 
 
 Usage: Fleet
@@ -75,15 +88,30 @@ Check out an [example](https://github.com/skippy/docker-repo/tree/master/elastic
 <a name="details"></a>
 Details & Gotchas:
 -------------------------
-This is for development and testing purposes only, at this point.  It is missing a few key components such as unit and integration testing, but most importantly, it is NOT SECURE.  Anyone can call the service and pull down certificates, and the data in transit and at rest is not secure.  This needs to be addressed before it should be used in a true production setting.
+This is for development and testing purposes only, at this point.  It is missing a few key components, but most importantly, it is NOT SECURE.  Anyone can call the service and pull down certificates, and the data in transit and at rest is not secure.  This needs to be addressed before it should be used in a true production setting.
+
+To custom compile confd, do the following:
+* `git clone https://github.com/kelseyhightower/confd.git`
+* within native docker container (ie, not remote), run: `docker run -it --rm -v "$(pwd)/share/confd":/usr/src/myapp -w /usr/src/myapp golang:1.3.3-wheezy /bin/bash`
+* within the go container, run:
+```
+go get -v -d ./...
+go build -v -o confd-custom-linux-amd64
+```
+
+Tests:
+-------------------------
+
+* run tests: 
+
+`$ test/test.sh`
 
 
 <a name="todos"></a>
 TODOs:
 -------------------------
 * allow AWS DynamoDB to be used as the discovery service
-* add a test suite!
 * improve help and documentation
 * implement security in transit
 * implement security at rest
-* rewrite in proper Python style (i.e. OO based)
+* use standard confd.  
