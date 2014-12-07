@@ -2,16 +2,13 @@
 # set -eo pipefail
 
 echo "stopping elasticsearch_logging"
-fleetctl stop \
+fleetctl stop -block-attempts=3 \
 	elasticsearch_logging@{1..2}.service \
 	elasticsearch_logging-kibana.service
 # FIXME: sometimes it takes awhile for systemd to stop things... 
 # if we go right to destroy this can leave services running...
 echo "destroying elasticsearch_logging"
 fleetctl destroy \
-	elasticsearch_logging@.service \
-	elasticsearch_logging-discovery@.service \
-	elasticsearch_logging-startup_lease@.service \
 	elasticsearch_logging@{1..2}.service \
 	elasticsearch_logging-discovery@{1..2}.service \
 	elasticsearch_logging-startup_lease@{1..2}.service \
@@ -23,18 +20,11 @@ echo "sleeping and then submitting elasticsearch_logging"
 SCRIPT=`readlink -f "$0"`
 SCRIPTPATH=`dirname "$SCRIPT"`
 sleep 5
-fleetctl submit \
-	"$SCRIPTPATH/elasticsearch_logging@.service" \
-	"$SCRIPTPATH/elasticsearch_logging-discovery@.service" \
-	"$SCRIPTPATH/elasticsearch_logging-startup_lease@.service" \
-	"$SCRIPTPATH/elasticsearch_logging-kibana.service"
-
-echo "loading elasticsearch_logging"
 fleetctl load \
-	elasticsearch_logging@{1..2}.service \
-	elasticsearch_logging-discovery@{1..2}.service \
-	elasticsearch_logging-startup_lease@{1..2}.service \
-	elasticsearch_logging-kibana.service
+	"$SCRIPTPATH/elasticsearch_logging@{1..2}.service" \
+	"$SCRIPTPATH/elasticsearch_logging-discovery@{1..2}.service" \
+	"$SCRIPTPATH/elasticsearch_logging-startup_lease@{1..2}.service" \
+	"$SCRIPTPATH/elasticsearch_logging-kibana.service"
 
 echo "starting elasticsearch_logging"
 fleetctl start \

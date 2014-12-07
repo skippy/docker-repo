@@ -43,7 +43,7 @@ After you have your CoreOS cluster setup (see their [docs](https://coreos.com/do
 To register and startup a 5-node ElasticSearch cluster, run the following:
 
 ```
-fleetctl stop elasticsearch_logging@{1..5}.service
+fleetctl stop -block-attempts=3 elasticsearch_logging@{1..5}.service
 
 fleetctl destroy elasticsearch_logging@.service elasticsearch_logging-discovery@.service elasticsearch_logging-startup_lease@.service elasticsearch_logging@{1..5}.service elasticsearch_logging-discovery@{1..5}.service elasticsearch_logging-startup_lease@{1..5}.service
 
