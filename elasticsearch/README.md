@@ -5,7 +5,7 @@ Elasticsearch Docker Container
 tl;dr
 -----
 
-* extends [dockerfile/elasticsearch](https://registry.hub.docker.com/u/dockerfile/elasticsearch/)
+* small (~200MB) image
 * adds [marvel](http://www.elasticsearch.org/overview/marvel/) and [kibana3](http://www.elasticsearch.org/overview/kibana/) plugins
 * Fleet SystemD config files to create self-registered ElasticSearch Cluster.
 

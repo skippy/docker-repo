@@ -37,8 +37,7 @@ ExecStart=/bin/bash -c '\
 	      --label="elasticsearch_logging" \
     	  --service-id="elasticsearch_logging-%H" \
      	  --host-ip=${COREOS_PRIVATE_IPV4} \
-	      --monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" \
-    	  --service-info='{"http_port": 9200, "transport_port": 9300, "name": "elasticsearch_logging-%H"}\' '
+	      --monitor-url="http://${COREOS_PRIVATE_IPV4}:9200" '
 
 ExecStop=/usr/bin/docker stop -t 10 %p-%H
 ExecStop=-/usr/bin/docker rm %p-%H

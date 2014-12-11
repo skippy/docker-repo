@@ -1,0 +1,32 @@
+[Unit]
+Description=FluentD Log Forwarding Service
+
+Requires=docker.service
+After=docker.service
+
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/usr/bin/docker pull skippy/fluentd
+ExecStart=/usr/bin/docker run \
+				--name %p \
+				-e "ETCD_IP=${COREOS_PRIVATE_IPV4}" \
+				-p 5170:5170 \
+				-v /var/lib/%p:/data \
+				skippy/fluentd
+
+
+ExecStop=/usr/bin/docker stop -t 10 %p
+ExecStop=/usr/bin/docker rm %p
+
+[X-Fleet]
+Global=true
