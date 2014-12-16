@@ -18,14 +18,6 @@ echo "sleeping and then submitting fluentd"
 SCRIPT=`readlink -f "$0"`
 SCRIPTPATH=`dirname "$SCRIPT"`
 sleep 5
-fleetctl load \
-	$SCRIPTPATH/fluentd-forwarder.service \
-	$SCRIPTPATH/journald-fluentd.service \
-	$SCRIPTPATH/journald-fluentd-pos.service
-
-
-
-echo "starting fluentd"
 fleetctl start \
 	$SCRIPTPATH/fluentd-forwarder.service \
 	$SCRIPTPATH/journald-fluentd.service \

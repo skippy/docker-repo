@@ -55,8 +55,6 @@ ExecStartPre=-/usr/bin/docker kill %p-%H
 ExecStartPre=-/usr/bin/docker rm %p-%H
 ExecStartPre=/usr/bin/docker pull skippy/elasticsearch
 ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
-ExecStartPre=/usr/bin/docker pull busybox
-ExecStartPre=-/usr/bin/docker run -v /var/lib/%p:/data --name esldata busybox /bin/echo "Data volume container for %p-%H" 
 
 # lets:
 #  - startup individual nodes in a serial manner;
@@ -79,7 +77,7 @@ ExecStart=/bin/bash -c '\
     fi; \
 	/usr/bin/docker run \
 		--name %p-%H \
-		--volumes-from esldata \
+		-v /var/lib/%p:/data \
 		-p 9200:9200 -p 9300:9300 \
 		skippy/elasticsearch \
 			-Des.default.cluster.name=es_logs \

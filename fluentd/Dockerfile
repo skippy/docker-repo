@@ -1,8 +1,8 @@
 # from https://github.com/GoogleCloudPlatform/kubernetes/blob/master/contrib/logging/fluentd-es-image/Dockerfile
-# TODO: it would be great to make this smaller...but getting ruby 2.1 installed is a PITA
-
 FROM centurylink/ruby-base:2.1
 MAINTAINER  Adam Greene <adam.greene@gmail.com>
+
+ENV FLUENTD_VERSION 0.12.1
 
 # Ensure there are enough file descriptors for running Fluentd.
 RUN ulimit -n 65536
@@ -14,7 +14,7 @@ RUN apt-get update && \
     apt-get install -yq libcurl4-openssl-dev && \
     apt-get clean
 
-RUN gem install fluentd && \
+RUN gem install fluentd:$FLUENTD_VERSION && \
 	fluent-gem install \
 		fluent-plugin-elasticsearch \
 		fluent-plugin-record-reformer \
@@ -34,8 +34,6 @@ RUN chmod +x /run.sh
 Expose 5170
 
 VOLUME '/data'
-
-#USER daemon
 
 CMD ["/run.sh"]
 

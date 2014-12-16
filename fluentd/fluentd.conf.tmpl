@@ -27,13 +27,15 @@
 
 # FIXME: if the tag is the same as the incoming, this fails
 #        the fluentd-plugin-record_reformer needs to be patched
-<match system>
-  type record_reformer
+<filter system>
+  @type record_transformer
   renew_record false
   enable_ruby false
-  remove_keys __CURSOR,__REALTIME_TIMESTAMP,__MONOTONIC_TIMESTAMP,_BOOT_ID,_UID,_GID,_CAP_EFFECTIVE,_SYSTEMD_SLICE,SYSLOG_IDENTIFIER,_SYSTEMD_CGROUP,_CMDLINE,_COMM
-  tag system.clean
-</match>
+  remove_keys __CURSOR,__REALTIME_TIMESTAMP,__MONOTONIC_TIMESTAMP,_BOOT_ID,_UID,_GID,_CAP_EFFECTIVE,_SYSTEMD_SLICE,SYSLOG_FACILITY,_SYSTEMD_CGROUP,_COMM
+  <record>
+    hostname ${hostname}
+  </record>
+</filter>
 
 {{ if getenv "DEBUG_FLUENTD" }}
 # useful for debugging!
@@ -60,7 +62,6 @@
   {{ end }}
 
   logstash_format true
-#  logstash_prefix 'fluentd'
 
   reload_on_failure true
   reload_connections true

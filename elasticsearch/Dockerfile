@@ -5,7 +5,7 @@ FROM errordeveloper/oracle-jre
 
 MAINTAINER Adam Greene <adam.greene@gmail.com>
 
-ENV ELASTICSEARCH_BINARY_RELEASE 1.4.0
+ENV ELASTICSEARCH_BINARY_RELEASE 1.4.1
 
 RUN curl \
   --silent \
@@ -25,7 +25,6 @@ ADD elasticsearch.conf /usr/elasticsearch/config/elasticsearch.yml
 
 # Install plugins
 RUN /usr/elasticsearch/bin/plugin -s --install elasticsearch/marvel/latest
-RUN /usr/elasticsearch/bin/plugin -s -url http://download.elasticsearch.org/kibana/kibana/kibana-latest.zip --install elasticsearch/kibana3
 
 
 VOLUME [ "/data" ]
