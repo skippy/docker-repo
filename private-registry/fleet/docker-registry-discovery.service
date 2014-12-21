@@ -1,0 +1,65 @@
+[Unit]
+Description=Private Docker Registry Discovery Service
+
+Requires=etcd.service
+After=etcd.service
+ 
+[Service]
+TimeoutStartSec=10m
+TimeoutStopSec=90s
+
+Restart=always
+RestartSec=10s
+
+EnvironmentFile=/etc/environment
+Environment=CONF_FILE=/etc/systemd/system/docker.service.d/private-registry-test.conf
+
+ExecStartPre=/usr/bin/docker pull skippy/service_toolkit
+ExecStart=/bin/bash -c '\
+	log_tag="private-registry-discovery"; \
+	function cleanup() { \
+	    sed --in-place "/DOCKER_REPO/d" /etc/environment; \
+	    rm $CONF_FILE > /dev/null 2>&1; \
+    }; \
+    function reset() { \
+    	systemctl daemon-reload; \
+		systemctl restart docker.service; \
+    }; \
+   	while true; do \
+		host=$(/usr/bin/docker run --rm skippy/service_toolkit hosts --label="docker-registry"); \
+		grep  "DOCKER_REPO=$host" /etc/environment > /dev/null 2>&1; \
+		grep1_ret=$?; \
+		grep  "DOCKER_REPO=" /etc/environment > /dev/null 2>&1; \
+		grep2_ret=$?; \
+		logger -t "$log_tag" "waking up and checking.  host: $host, strict env match: $grep1_ret, loose env match: $grep2_ret"; \
+		if [ -z "$host" ] && [ $grep2_ret -eq 0 ]; then \
+			logger -t "$log_tag" "host disappeared; cleaning up"; \
+			cleanup; \
+			reset; \
+		elif [ -z "$host" ]; then \
+			logger -t "$log_tag" "no host; sleeping"; \
+			cleanup; \
+		elif [ -n "$host" ] && [ $grep1_ret -ne 0 ]; then \
+			logger -t "$log_tag" "new host registered; updating configs"; \
+    		cleanup; \
+			echo "DOCKER_REPO=$host:5000/" >> /etc/environment; \
+			echo "[Service]\nEnvironment=DOCKER_OPTS=\\\"--registry-mirror=\'http://$host:5000\'\\\"" > /etc/systemd/system/docker.service.d/private-registry-test.conf; \
+			reset; \
+		else \
+			logger -t "$log_tag" "no changes; sleeping"; \
+		fi; \
+		sleep 10; \
+	done; \
+'
+
+ExecStop=/bin/bash -ec '\
+	logger -t "$log_tag" "removing registry from configs and exiting"; \
+    sed --in-place "/DOCKER_REPO/d" /etc/environment; \
+    rm $CONF_FILE; \
+   	systemctl daemon-reload; \
+	systemctl restart docker.service; \
+'
+
+
+[X-Fleet]
+Global=true
