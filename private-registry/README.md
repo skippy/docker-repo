@@ -12,6 +12,22 @@ tl;dr
 * the private registry is using dev parameters
 
 
+Usage:
+------
+
+```console
+docker run \
+	--rm \
+   	--name %p \
+    -p 5000:5000 \
+    -v /my/cache/path:/data \
+    skippy/private-registry
+```
+
+The database and images cache are located within /data, so use `-v` to mount that volumn in a space that will be persisted across container reboots.
+
+There are a few bugs within the base `registry:0.9.0` that can cause problems with startups, such as a race condition on building the sqlite tables.  If you use `-v`, you may need to run it a few times to get it to come up.  See `fleet/docker-registry.service` for ways to start it up under systemd
+
 
 Usage: via Fleet
 ----------------
@@ -53,7 +69,7 @@ To run with production parameters, see [docker-registry configuration](https://g
 Dependencies
 ------------
 
-* [CoreOS](https://coreos.com)
+None unless you want to use fleet, in which case they are:
 * [ETCD](https://github.com/coreos/etcd)
 * [Fleet](https://github.com/coreos/fleet)
 * docker container [skippy/service-toolkit](https://registry.hub.docker.com/u/skippy/service_toolkit/)

@@ -20,7 +20,7 @@ ExecStart=/usr/bin/docker run \
 			--rm \
 	    	--name %p \
 	        -p 5000:5000 \
-	        -v /home/core/share/.docker_registry_cache:/tmp/registry \
+	        -v /home/core/share/.docker_registry_cache:/data \
 		    skippy/private-registry
 
 ExecStop=/usr/bin/docker stop -t 10 %p
