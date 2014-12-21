@@ -60,7 +60,7 @@ ExecStart=/bin/bash -c '\
     fi; \
     echo "-------------------------------------------"; \
     echo $OPTS; \
-	/usr/bin/docker run $OPTS skippy/influxdb:latest \
+	/usr/bin/docker run $OPTS skippy/influxdb:latest '
 
 ExecStop=/usr/bin/docker stop -t 30 %p-%H
 ExecStop=/usr/bin/docker rm %p-%H
