@@ -1,0 +1,48 @@
+# TODOS:
+#  - this binds to wherever the first ES instance is started;
+#    this is a bit brittle and should be made more flexible?
+[Unit]
+Description=%p service
+
+# Requirements
+Requires=etcd.service
+Requires=docker.service
+Requires=elasticsearch_logging@1.service
+
+# Dependency ordering
+After=etcd.service
+After=elasticsearch_logging@1.service
+BindsTo=elasticsearch_logging@1.service
+
+
+[Service]
+# Let processes take awhile to start up (for first run Docker containers)
+TimeoutStartSec=10m
+# keep kill mode, but lets give docker plenty of chances to stop cleanly
+TimeoutStopSec=90s
+
+# have SystemD restart the service if it goes down
+Restart=always
+RestartSec=10s
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# The URL used to get to kibana will be ${ES_SCHEME}://${ES_HOST}:${ES_PORT} - For external access, you will want to change this.
+ExecStartPre=-/usr/bin/docker kill %p-%H
+ExecStartPre=-/usr/bin/docker rm %p-%H
+ExecStartPre=/usr/bin/docker pull arcus/kibana:latest
+ExecStart=/bin/bash -xc "exec /usr/bin/docker run --name %p-%H \
+                                                --hostname %p-%H \
+                                                --publish 8090:80 \
+                                                -e ES_SCHEME=http \
+                                                -e ES_HOST=${COREOS_PRIVATE_IPV4} \
+                                                -e ES_PORT=9200 \
+                                                arcus/kibana:latest"
+
+ExecStop=/usr/bin/docker stop %p-%H
+ExecStop=-/usr/bin/docker rm %p-%H
+
+
+[X-Fleet]
+MachineOf=elasticsearch_logging@1.service
