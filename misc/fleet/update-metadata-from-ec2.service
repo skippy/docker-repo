@@ -1,0 +1,23 @@
+[Unit]
+Description=Update Fleet metadata tag
+Before=fleet.service
+Requires=fleet.service
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+ExecStart=/bin/bash -c '\
+    conf_file=/run/systemd/system/fleet.service.d/21-metadata.conf; \
+    instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id); \
+    az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone); \
+    region=${az::-1}; \
+    sgs=$(curl -s http://169.254.169.254/latest/meta-data/security-groups/ | tr "\\n", ","); \
+    echo -e "[Service]\n" > $conf_file; \
+    echo -e "Environment=\"FLEET_METADATA=${FLEET_METADATA},instance_id=${instance_id},az=${az},region=${region}\,security_groups=${sgs}\""  > $conf_file; \
+    systemctl daemon-reload; \
+    systemctl restart fleet.service; \
+'
+
+[X-Fleet]
+Global=true
+
