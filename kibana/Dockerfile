@@ -1,7 +1,7 @@
 FROM errordeveloper/oracle-jre
 MAINTAINER Adam Greene <adam.greene@gmail.com>
 
-ENV KIBANA_VERSION 4.0.0-BETA2
+ENV KIBANA_VERSION 4.0.0-BETA3
 
 RUN curl \
   --silent \
