@@ -5,7 +5,7 @@ FROM errordeveloper/oracle-jre
 
 MAINTAINER Adam Greene <adam.greene@gmail.com>
 
-ENV ELASTICSEARCH_BINARY_RELEASE 1.4.1
+ENV ELASTICSEARCH_BINARY_RELEASE 1.4.2
 
 RUN curl \
   --silent \
