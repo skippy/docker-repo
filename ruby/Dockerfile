@@ -5,8 +5,8 @@ FROM debian:jessie
 
 MAINTAINER Adam Greene <adam.greene@gmail.com>
 
-ENV RUBY_BUILD_DEPENDENCIES curl build-essential libffi-dev libgdbm-dev libreadline6-dev libyaml-dev
-ENV COMMON_GEM_DEPENDENCIES ca-certificates libcurl4-gnutls-dev libssl-dev libxml2 libxslt1.1 openssl
+ENV RUBY_BUILD_DEPENDENCIES curl build-essential libffi-dev libgdbm-dev libreadline6-dev
+ENV COMMON_GEM_DEPENDENCIES ca-certificates libcurl4-gnutls-dev libssl-dev libxml2 libxslt1.1 openssl libyaml-dev
 
 ENV RUBY_MAJOR 2.2
 ENV RUBY_VERSION 2.2.1
@@ -30,7 +30,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
   && rm -r /tmp/* \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get remove -y $RUBY_BUILD_DEPENDENCIES \
-  && apt-get autoremove \
+  && apt-get autoremove -y \
   && apt-get clean \
   && truncate -s 0 /var/log/*log
 
