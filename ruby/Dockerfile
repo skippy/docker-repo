@@ -7,9 +7,10 @@ MAINTAINER Adam Greene <adam.greene@gmail.com>
 
 # NOTES:
 #  - git is here for private gem dependencies in Gemfiles
-#
+#  - ssh is also used by private gem dependencies in Gemfiles
 ENV RUBY_BUILD_DEPENDENCIES curl build-essential libffi-dev libgdbm-dev libreadline6-dev
-ENV COMMON_GEM_DEPENDENCIES ca-certificates libcurl4-gnutls-dev libssl-dev libxml2 libxslt1.1 openssl libyaml-dev git
+ENV COMMON_GEM_DEPENDENCIES ca-certificates libcurl4-gnutls-dev libssl-dev libxml2 \
+                            libyaml-dev git ssh
 
 ENV RUBY_MAJOR 2.2
 ENV RUBY_VERSION 2.2.1
