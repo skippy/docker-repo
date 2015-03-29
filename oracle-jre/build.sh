@@ -2,5 +2,5 @@
 
 set -m
 
-docker build -t skippy/ruby:2.2  .
-docker push skippy/ruby:2.2
+docker build -t skippy/oracle-jre  .
+docker push skippy/oracle-jre
