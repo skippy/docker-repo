@@ -23,7 +23,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
   && mkdir -p /tmp/ruby \
   && curl -s -o /tmp/ruby-$RUBY_VERSION.tar.gz http://cache.ruby-lang.org/pub/ruby/$RUBY_MAJOR/ruby-$RUBY_VERSION.tar.gz \
   && echo "${RUBY_SHA256}  /tmp/ruby-$RUBY_VERSION.tar.gz" > /tmp/ruby-$RUBY_VERSION.sha256 \
-  && sha256sum /tmp/ruby-$RUBY_VERSION.sha256 \
+  && sha256sum -c /tmp/ruby-$RUBY_VERSION.sha256 \
   && tar --strip-components=1 -C /tmp/ruby -zxf /tmp/ruby-$RUBY_VERSION.tar.gz \
   && cd /tmp/ruby \
   && ./configure --disable-install-doc \
