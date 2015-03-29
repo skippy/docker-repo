@@ -1,9 +1,9 @@
 # heavily influenced by https://registry.hub.docker.com/u/errordeveloper/oracle-jre/
 #  just keeping it more up-to-date
-FROM        progrium/busybox
+FROM        gliderlabs/alpine:3.1
 MAINTAINER  Adam Greene <adam.greene@gmail.com>
 
-RUN opkg-install curl ca-certificates
+RUN apk-install  curl ca-certificates
 
 ENV JAVA_HOME /usr/jdk1.8.0_40
 ENV JAVA_SHA256 117c7d970b6f74de1ee7b9db20f4f16a7b5d2ec364806d7d375d85dd54b48bc8
@@ -12,7 +12,7 @@ RUN curl \
   --silent \
   --location \
   --retry 3 \
-  --cacert /etc/ssl/certs/GeoTrust_Global_CA.crt \
+  --cacert /etc/ssl/certs/ca-certificates.crt \
   --header "Cookie: oraclelicense=accept-securebackup-cookie;" \
   --output /tmp/server-jre-8u40-linux-x64.tar.gz \
   "http://download.oracle.com/otn-pub/java/jdk/8u40-b26/server-jre-8u40-linux-x64.tar.gz" \

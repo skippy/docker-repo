@@ -3,7 +3,8 @@
 FROM        progrium/busybox
 MAINTAINER  Adam Greene <adam.greene@gmail.com>
 
-RUN opkg-install curl ca-certificates
+RUN opkg-install curl ca-certificates \
+  && rm -rf /tmp/*
 
 ENV JAVA_HOME /usr/jdk1.8.0_40
 ENV JAVA_SHA256 da1ad819ce7b7ec528264f831d88afaa5db34b7955e45422a7e380b1ead6b04d
