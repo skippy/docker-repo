@@ -1,4 +1,4 @@
-FROM registry:0.9.0
+FROM registry:0.9.1
 MAINTAINER  Adam Greene <adam.greene@gmail.com>
 
 ENV STORAGE file
