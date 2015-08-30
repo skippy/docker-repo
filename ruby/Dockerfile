@@ -13,8 +13,8 @@ ENV COMMON_GEM_DEPENDENCIES ca-certificates libcurl4-gnutls-dev libssl-dev libxm
                             libyaml-dev git ssh
 
 ENV RUBY_MAJOR 2.2
-ENV RUBY_VERSION 2.2.1
-ENV RUBY_SHA256 5a4de38068eca8919cb087d338c0c2e3d72c9382c804fb27ab746e6c7819ab28
+ENV RUBY_VERSION 2.2.3
+ENV RUBY_SHA256 df795f2f99860745a416092a4004b016ccf77e8b82dec956b120f18bdc71edce
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y -q \
   $RUBY_BUILD_DEPENDENCIES $COMMON_GEM_DEPENDENCIES \
